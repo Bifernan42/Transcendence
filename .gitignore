@@ -1,0 +1,6 @@
+*.py[cod]
+__pycache__/
+setup-env/
+*.swp
+*.vscode
+*.sqlite3
