@@ -20,16 +20,16 @@ const posix = std.posix;
 const process = std.process;
 const json = std.json;
 
+const stdout_handle = io.getStdOut();
+const stdout = stdout_handle.writer();
+
+const Cli = @import("Cli.zig");
+const Config = @import("Config.zig");
 const Pong = @import("Pong.zig");
 const Protocol = @import("Protocol.zig");
+const Server = @import("Server.zig");
 
-pub fn main() !void {
-    var gpa: heap.GeneralPurposeAllocator(.{}) = .init;
-    defer _ = gpa.deinit();
-
-    const stdout_handle = io.getStdOut();
-    const stdout = stdout_handle.writer();
-
+fn jsonDemo() !void {
     try stdout.print("Pong.Vector2.default {}\n", .{Pong.Vector2.default});
     try stdout.print("Pong.Paddle.default {}\n", .{Pong.Paddle.default});
     try stdout.print("Pong.Player.default {}\n", .{Pong.Player.default});
@@ -42,4 +42,20 @@ pub fn main() !void {
     try stdout.print("Protocol.Config.Response.default {}\n", .{Protocol.Config.Response.default});
     try stdout.print("Protocol.Update.Request.default {}\n", .{Protocol.Update.Request.default});
     try stdout.print("Protocol.Update.Response.default {}\n", .{Protocol.Update.Response.default});
+}
+
+pub fn main() !void {
+    var gpa: heap.GeneralPurposeAllocator(.{}) = .init;
+    defer _ = gpa.deinit();
+
+    var arena: heap.ArenaAllocator = .init(gpa.allocator());
+    defer arena.deinit();
+
+    var parser: Cli = try .init(&arena);
+    defer parser.deinit();
+
+    const config: Config = try parser.parseOrDefault();
+
+    var server: Server = try .init(gpa.allocator(), config);
+    defer server.deinit();
 }

@@ -20,6 +20,14 @@ const opts: json.StringifyOptions = switch (builtin.mode) {
     else => .{},
 };
 
+pub const Difficulty = enum {
+    recruit,
+    normal,
+    commando,
+    veteran,
+    cheater,
+};
+
 pub const GameKind = enum {
     local_ai,
     local_mp,
