@@ -77,7 +77,7 @@ WSGI_APPLICATION = 'transcendence.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'transcendancedb',
+        'NAME': 'transcendencedb',
         'USER': 'admin',
         'PASSWORD': 'admin_password',
         'HOST': 'postgres',
