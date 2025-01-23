@@ -20,61 +20,41 @@ const process = std.process;
 const builtin = @import("builtin");
 
 const Pong = @import("Pong.zig");
+
 const Config = @This();
 
-server_ip: ?[]const u8 = null,
-server_port: ?u16 = null,
-server_tickrate: ?u16 = null,
-server_log_lvl: ?u2 = null,
-
-pong_game_kind: ?Pong.GameKind = null,
-pong_player1_name: ?[]const u8 = null,
-pong_player2_name: ?[]const u8 = null,
-pong_paddle_speed: ?i32 = null,
-pong_ball_speed: ?i32 = null,
-
-pong_vt_board_width: ?i32 = null,
-pong_vt_board_height: ?i32 = null,
-pong_vt_ball_radius: ?f32 = null,
-pong_vt_paddle_width: ?i32 = null,
-pong_vt_paddle_height: ?i32 = null,
-
-pong_ai_difficulty: ?Pong.Difficulty,
+ip: []const u8 = "127.0.0.1",
+port: u16 = 8080,
+tickrate: u16 = if (builtin.mode == .Debug) 5 else 256,
+log_lvl: u2 = 3,
+game_kind: Pong.GameKind = .local_ai,
+player1_name: []const u8 = "P1",
+player2_name: []const u8 = "AI",
+paddle_speed: u16 = 8,
+ball_speed: u16 = 256,
+vt_board_width: u16 = 1024,
+vt_board_height: u16 = 512,
+vt_ball_radius: u16 = 4,
+vt_paddle_width: u16 = 8,
+vt_paddle_height: u16 = 64,
+ai_difficulty: Pong.Difficulty = .normal,
 
 pub const default: Config = .{
-    .server_ip = null,
-    .server_port = null,
-    .server_tickrate = null,
-    .server_log_lvl = null,
-    .pong_game_kind = null,
-    .pong_player1_name = null,
-    .pong_player2_name = null,
-    .pong_paddle_speed = null,
-    .pong_ball_speed = null,
-    .pong_vt_board_width = null,
-    .pong_vt_board_height = null,
-    .pong_vt_ball_radius = null,
-    .pong_vt_paddle_width = null,
-    .pong_vt_paddle_height = null,
-    .pong_ai_difficulty = null,
-};
-
-pub const fallback: Config = .{
-    .server_ip = "127.0.0.1",
-    .server_port = 8080,
-    .server_tickrate = 256,
-    .server_log_lvl = 3,
-    .pong_game_kind = .local_ai,
-    .pong_player1_name = "P1",
-    .pong_player2_name = "Ai",
-    .pong_paddle_speed = 10,
-    .pong_ball_speed = 300,
-    .pong_vt_board_width = 1024,
-    .pong_vt_board_height = 372,
-    .pong_vt_ball_radius = 8,
-    .pong_vt_paddle_width = 8,
-    .pong_vt_paddle_height = 64,
-    .pong_ai_difficulty = .normal,
+    .ip = "127.0.0.1",
+    .port = 8080,
+    .tickrate = if (builtin.mode == .Debug) 5 else 256,
+    .log_lvl = 3,
+    .game_kind = .local_ai,
+    .player1_name = "P1",
+    .player2_name = "AI",
+    .paddle_speed = 8,
+    .ball_speed = 256,
+    .vt_board_width = 1024,
+    .vt_board_height = 512,
+    .vt_ball_radius = 4,
+    .vt_paddle_width = 8,
+    .vt_paddle_height = 64,
+    .ai_difficulty = .normal,
 };
 
 pub fn format(

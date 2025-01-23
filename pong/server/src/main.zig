@@ -20,14 +20,14 @@ const posix = std.posix;
 const process = std.process;
 const json = std.json;
 
-const stdout_handle = io.getStdOut();
-const stdout = stdout_handle.writer();
-
 const Cli = @import("Cli.zig");
 const Config = @import("Config.zig");
 const Pong = @import("Pong.zig");
 const Protocol = @import("Protocol.zig");
 const Server = @import("Server.zig");
+
+const stdout_handle = io.getStdOut();
+const stdout = stdout_handle.writer();
 
 fn jsonDemo() !void {
     try stdout.print("Pong.Vector2.default {}\n", .{Pong.Vector2.default});
@@ -44,18 +44,26 @@ fn jsonDemo() !void {
     try stdout.print("Protocol.Update.Response.default {}\n", .{Protocol.Update.Response.default});
 }
 
-pub fn main() !void {
+pub fn main() !u8 {
     var gpa: heap.GeneralPurposeAllocator(.{}) = .init;
     defer _ = gpa.deinit();
 
-    var arena: heap.ArenaAllocator = .init(gpa.allocator());
-    defer arena.deinit();
-
-    var parser: Cli = try .init(&arena);
+    var parser: Cli = try .init(gpa.allocator());
     defer parser.deinit();
 
     const config: Config = try parser.parseOrDefault();
+    log.info("{}", .{config});
 
-    var server: Server = try .init(gpa.allocator(), config);
+    var server: Server = Server.init(gpa.allocator(), config) catch |err| {
+        log.err("server initialization failed with {!}.", .{err});
+        return 1;
+    };
     defer server.deinit();
+
+    server.run() catch |err| {
+        log.err("server failed with {!}.", .{err});
+        return 1;
+    };
+
+    return 0;
 }

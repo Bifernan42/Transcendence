@@ -10,8 +10,6 @@
 //                                                                            //
 // ************************************************************************** //
 
-const builtin = @import("builtin");
-const root = @import("root");
 const std = @import("std");
 const net = std.net;
 const mem = std.mem;
@@ -19,7 +17,11 @@ const log = std.log;
 const heap = std.heap;
 const posix = std.posix;
 const json = std.json;
+const builtin = @import("builtin");
+const root = @import("root");
+
 const Pong = @import("Pong.zig");
+
 const Protocol = @This();
 
 const opts: json.StringifyOptions = switch (builtin.mode) {
@@ -27,7 +29,7 @@ const opts: json.StringifyOptions = switch (builtin.mode) {
     else => .{},
 };
 
-pub const Delimiter: []const u8 = &.{0xfe};
+pub const Delimiter: []const u8 = &.{0x1E};
 
 pub const Handshake = struct {
     pub const Request = struct {

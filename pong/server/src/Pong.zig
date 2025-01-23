@@ -10,9 +10,11 @@
 //                                                                            //
 // ************************************************************************** //
 
-const builtin = @import("builtin");
 const std = @import("std");
+const mem = std.mem;
 const json = std.json;
+const builtin = @import("builtin");
+
 const Pong = @This();
 
 const opts: json.StringifyOptions = switch (builtin.mode) {
@@ -26,6 +28,22 @@ pub const Difficulty = enum {
     commando,
     veteran,
     cheater,
+
+    pub fn fromString(maybe_difficulty: []const u8) ?Difficulty {
+        if (mem.eql(u8, "recruit", maybe_difficulty)) {
+            return Difficulty.recruit;
+        } else if (mem.eql(u8, "normal", maybe_difficulty)) {
+            return Difficulty.normal;
+        } else if (mem.eql(u8, "commando", maybe_difficulty)) {
+            return Difficulty.commando;
+        } else if (mem.eql(u8, "veteran", maybe_difficulty)) {
+            return Difficulty.veteran;
+        } else if (mem.eql(u8, "cheater", maybe_difficulty)) {
+            return Difficulty.cheater;
+        } else {
+            return null;
+        }
+    }
 };
 
 pub const GameKind = enum {
@@ -34,6 +52,18 @@ pub const GameKind = enum {
     remote_mp,
 
     pub const default: GameKind = .local_ai;
+
+    pub fn fromString(maybe_kind: []const u8) ?GameKind {
+        if (mem.eql(u8, "local_ai", maybe_kind)) {
+            return GameKind.local_ai;
+        } else if (mem.eql(u8, "local_mp", maybe_kind)) {
+            return GameKind.local_mp;
+        } else if (mem.eql(u8, "remote_mp", maybe_kind)) {
+            return GameKind.local_mp;
+        } else {
+            return null;
+        }
+    }
 };
 
 pub const Vector2 = struct {
@@ -135,6 +165,20 @@ pub const Player = struct {
         press_resume,
 
         pub const default: Action = .press_none;
+
+        pub fn fromString(maybe_action: []const u8) ?Action {
+            if (mem.eql(u8, "press_none", maybe_action)) {
+                return Action.press_none;
+            } else if (mem.eql(u8, "press_up", maybe_action)) {
+                return Action.press_up;
+            } else if (mem.eql(u8, "press_down", maybe_action)) {
+                return Action.press_down;
+            } else if (mem.eql(u8, "press_pause", maybe_action)) {
+                return Action.press_pause;
+            } else if (mem.eql(u8, "press_resume", maybe_action)) {
+                return Action.press_resume;
+            }
+        }
     };
 
     pub const Event = struct {
