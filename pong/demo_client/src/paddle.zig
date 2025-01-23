@@ -15,8 +15,6 @@ const rl = @import("raylib");
 pub const Paddle = @This();
 
 dimension: rl.Rectangle,
-direction: rl.Vector2,
-velocity: f32,
 
 pub const Direction2D = enum {
     up,
@@ -26,11 +24,9 @@ pub const Direction2D = enum {
     none,
 };
 
-pub fn init(dimension: rl.Rectangle, velocity: f32) Paddle {
+pub fn init(dimension: rl.Rectangle) Paddle {
     return .{
         .dimension = dimension,
-        .velocity = velocity,
-        .direction = .{},
     };
 }
 

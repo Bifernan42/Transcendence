@@ -22,7 +22,7 @@ pub fn main() !void {
 
 fn drawScore(allocator: Allocator, player1_score: u8, player2_score: u8, screen_width: i32) void {
     const font_size = 40;
-    const text: []const u8 = std.fmt.allocPrintZ(allocator, "{d} - {d}", .{ player1_score, player2_score }) catch |err| {
+    const text: [*:0]const u8 = std.fmt.allocPrintZ(allocator, "{d} - {d}", .{ player1_score, player2_score }) catch |err| {
         std.debug.print("Error formatting score: {any}\n", .{err});
         return;
     };
@@ -46,7 +46,7 @@ fn drawRestartButton(screen_width: i32, screen_height: i32) i32 {
     return rg.guiButton(.{ .x = button_x, .y = button_y, .width = button_width, .height = button_height }, "Restart");
 }
 
-fn gameOverScreen(winner_text: []const u8, winner_color: rl.Color, screen_width: i32, screen_height: i32) i32 {
+fn gameOverScreen(winner_text: [*:0]const u8, winner_color: rl.Color, screen_width: i32, screen_height: i32) i32 {
     const font_size = 30;
     const text_width = rl.measureText(winner_text, font_size);
 
@@ -71,7 +71,6 @@ fn gameLoop(screen_width: i32, screen_height: i32, title: [*:0]const u8, allocat
     const screen_center_x: f32 = @floatFromInt(@divFloor(screen_width, 2));
     const screen_center_y: f32 = @floatFromInt(@divFloor(screen_height, 2));
     const half_paddle_height: f32 = paddle_height / 2;
-    const paddle_velocity: f32 = 1.0;
 
     const player1 = Player.init("player1", .{
         .dimension = .{
@@ -80,11 +79,6 @@ fn gameLoop(screen_width: i32, screen_height: i32, title: [*:0]const u8, allocat
             .width = paddle_width,
             .height = paddle_height,
         },
-        .direction = .{
-            .x = 0,
-            .y = 0,
-        },
-        .velocity = paddle_velocity,
     }, rl.Color.red);
 
     const player2 = Player.init("player2", .{
@@ -94,11 +88,6 @@ fn gameLoop(screen_width: i32, screen_height: i32, title: [*:0]const u8, allocat
             .width = paddle_width,
             .height = paddle_height,
         },
-        .direction = .{
-            .x = 0,
-            .y = 0,
-        },
-        .velocity = paddle_velocity,
     }, rl.Color.blue);
 
     const board = Board.init(.{
