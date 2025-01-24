@@ -22,14 +22,14 @@ const process = std.process;
 const io = std.io;
 const builtin = @import("builtin");
 const Protocol = @import("Protocol.zig");
-const MessageBuffer = @import("MessageBuffer.zig");
+const String = @import("String.zig");
 
 const Client = @This();
 
 arena: heap.ArenaAllocator,
 address: net.Address,
 socket: posix.socket_t,
-buffer: MessageBuffer,
+buffer: String,
 
 pub fn init(gpa: mem.Allocator, address: net.Address, socket: posix.socket_t) !Client {
     var arena: heap.ArenaAllocator = .init(gpa);
@@ -38,7 +38,7 @@ pub fn init(gpa: mem.Allocator, address: net.Address, socket: posix.socket_t) !C
         .arena = arena,
         .address = address,
         .socket = socket,
-        .buffer = try MessageBuffer.initCapacity(arena.allocator(), mem.page_size, Protocol.Delimiter[0]),
+        .buffer = String.init(arena.allocator()),
     };
 }
 
@@ -54,28 +54,28 @@ pub fn getPollIn(client: *const Client) posix.pollfd {
     };
 }
 
-pub fn readUntilMessage(client: *Client, allocator: mem.Allocator) !?[]u8 {
-    var temp_buffer: [1024]u8 = undefined;
-    const buffer = &client.buffer;
-    while (true) {
-        if (try buffer.extractNextMessage(allocator)) |message| {
-            return message;
-        }
+// pub fn readUntilMessage(client: *Client, allocator: mem.Allocator) !?[]u8 {
+//     var temp_buffer: [1024]u8 = undefined;
+//     const buffer = &client.buffer;
+//     while (true) {
+//         if (try buffer.extractNextMessage(allocator)) |message| {
+//             return message;
+//         }
 
-        const bytes_read = try posix.recv(client.socket, &temp_buffer, 0);
+//         const bytes_read = try posix.recv(client.socket, &temp_buffer, 0);
 
-        if (bytes_read == 0) {
-            return error.Closed;
-        }
+//         if (bytes_read == 0) {
+//             return error.Closed;
+//         }
 
-        try buffer.append(temp_buffer[0..bytes_read]);
-    }
-}
+//         try buffer.append(temp_buffer[0..bytes_read]);
+//     }
+// }
 
-pub fn getMessage(client: *Client, allocator: mem.Allocator) !?[]u8 {
-    if (try client.buffer.extractNextMessage(allocator)) |message| {
-        return message;
-    } else {
-        return try client.readUntilMessage(allocator);
-    }
-}
+// pub fn getMessage(client: *Client, allocator: mem.Allocator) !?[]u8 {
+//     if (try client.buffer.extractNextMessage(allocator)) |message| {
+//         return message;
+//     } else {
+//         return try client.readUntilMessage(allocator);
+//     }
+// }
