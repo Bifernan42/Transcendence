@@ -4,3 +4,6 @@ setup-env/
 *.swp
 *.vscode
 *.sqlite3
+.zig-cache/
+zig-out/
+
