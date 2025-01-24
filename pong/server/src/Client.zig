@@ -30,6 +30,14 @@ gpa: mem.Allocator,
 address: net.Address,
 socket: posix.socket_t,
 buffer: String,
+status: Status,
+
+pub const Status = enum {
+    connected,
+    authentificated,
+    disconnected,
+    ready,
+};
 
 pub fn init(gpa: mem.Allocator, address: net.Address, socket: posix.socket_t) !Client {
     return .{
@@ -37,6 +45,7 @@ pub fn init(gpa: mem.Allocator, address: net.Address, socket: posix.socket_t) !C
         .address = address,
         .socket = socket,
         .buffer = String.init(gpa),
+        .status = .connected,
     };
 }
 
