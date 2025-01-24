@@ -189,17 +189,15 @@ pub fn removeClient(server: *Server, client: *Client) void {
 }
 
 pub fn handleClientRequest(server: *Server, client: *Client) !void {
-    _ = server;
-    _ = client;
-    // const request_arena = server.request_arena.allocator();
-    // defer _ = server.request_arena.reset(.retain_capacity);
-    // // const maybe_message = try client.getMessage(request_arena);
+    const request_arena = server.request_arena.allocator();
+    defer _ = server.request_arena.reset(.retain_capacity);
+    const maybe_message = try client.getMessage(request_arena);
 
-    // if (maybe_message) |message| {
-    //     std.debug.print("{} sent : '{s}'\n", .{ server.address, message });
-    // } else {
-    //     std.debug.print("{} sent : '{s}'\n", .{ server.address, "" });
-    // }
+    if (maybe_message) |message| {
+        std.debug.print("{} sent : '{s}'\n", .{ server.address, message });
+    } else {
+        std.debug.print("{} sent : '{s}'\n", .{ server.address, "" });
+    }
 }
 
 pub fn sendResponse(server: *Server, client: Client) !void {

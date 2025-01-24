@@ -85,6 +85,33 @@ pub const String = struct {
         try self.str.insertSliceAt(self.allocator, index, slice);
     }
 
+    pub fn indexOfFirstScalar(self: *const String, item: u8) ?usize {
+        return mem.indexOfScalar(u8, self.str.data(), item);
+    }
+
+    pub fn indexOfFirstScalarFrom(self: *const String, from: usize, item: u8) ?usize {
+        return mem.indexOfScalar(u8, self.str.data()[from..], item);
+    }
+
+    pub fn indexOfLastScalar(self: *const String, item: u8) ?usize {
+        return mem.lastIndexOfScalar(u8, self.str.data(), item);
+    }
+
+    pub fn indexOfLastScalarFrom(self: *const String, from: usize, item: u8) ?usize {
+        return mem.lastIndexOfScalar(u8, self.str.data()[from..], item);
+    }
+
+    pub fn extractUntilDelimiterAlloc(self: *String, out_allocator: mem.Allocator, delimiter: u8) !?[]u8 {
+        if (!self.str.containsScalar(delimiter)) {
+            return null;
+        }
+        const buffer = self.str.data();
+        const index_of_delimiter = self.str.indexOfFirstScalar(delimiter) orelse return null;
+        const result = try out_allocator.dupe(u8, buffer[0..index_of_delimiter]);
+        try self.str.eraseRangeFront(result.len);
+        return result;
+    }
+
     pub fn isEmpty(self: *String) bool {
         return self.str.isEmpty();
     }
@@ -203,10 +230,17 @@ pub const StringUnmanaged = struct {
     }
 
     fn reallocate(self: *StringUnmanaged, allocator: Allocator, new_capacity: usize) StringUnmanaged.Error!void {
-        const new_ptr = try allocator.realloc(self.allocatedSlice(), new_capacity);
-        self.ptr = new_ptr.ptr;
-        self.cap = new_capacity;
-        self.updateLenAfterResize();
+        if (self.isEmpty() and self.cap == 0) {
+            const new_ptr = try allocator.alloc(u8, new_capacity);
+            self.ptr = new_ptr.ptr;
+            self.cap = new_capacity;
+            self.updateLenAfterResize();
+        } else {
+            const new_ptr = try allocator.realloc(self.allocatedSlice(), new_capacity);
+            self.ptr = new_ptr.ptr;
+            self.cap = new_capacity;
+            self.updateLenAfterResize();
+        }
     }
 
     pub fn get(self: *StringUnmanaged, index: usize) StringUnmanaged.Error!*u8 {
@@ -259,6 +293,33 @@ pub const StringUnmanaged = struct {
 
     pub fn containsScalar(self: *const StringUnmanaged, item: u8) bool {
         return mem.containsAtLeast(u8, self.data(), 1, &.{item});
+    }
+
+    pub fn indexOfFirstScalar(self: *const StringUnmanaged, item: u8) ?usize {
+        return mem.indexOfScalar(u8, self.data(), item);
+    }
+
+    pub fn indexOfFirstScalarFrom(self: *const StringUnmanaged, from: usize, item: u8) ?usize {
+        return mem.indexOfScalar(u8, self.data()[from..], item);
+    }
+
+    pub fn indexOfLastScalar(self: *const StringUnmanaged, item: u8) ?usize {
+        return mem.lastIndexOfScalar(u8, self.data(), item);
+    }
+
+    pub fn indexOfLastScalarFrom(self: *const StringUnmanaged, from: usize, item: u8) ?usize {
+        return mem.lastIndexOfScalar(u8, self.data()[from..], item);
+    }
+
+    pub fn extractUntilDelimiterAlloc(self: *StringUnmanaged, out_allocator: mem.Allocator, delimiter: u8) ?[]u8 {
+        if (!self.containsScalar(delimiter)) {
+            return null;
+        }
+        const buffer = self.data();
+        const index_of_delimiter = self.indexOfFirstScalar(delimiter) orelse return null;
+        const result = try out_allocator.dupe(u8, buffer[0..index_of_delimiter]);
+        self.eraseRangeFront(result.len);
+        return result;
     }
 
     pub fn countScalar(self: *const StringUnmanaged, item: u8) usize {
