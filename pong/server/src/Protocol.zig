@@ -123,15 +123,9 @@ pub fn Request(comptime value: Protocol.Kind) type {
             };
         }
 
-        pub fn setRequestObjectOrInvalidate(self: *Self, request_object: ProtocolRequest) Error!void {
-            const allocator = self.arena.allocator();
-            const sanitized = json.parseFromValueLeaky(ProtocolRequest, allocator, request_object, .{}) catch |err| {
-                std.log.err("unexpected error while setting inner Request object : {!}", .{err});
-                self.status = .invalid;
-                return Error.InvalidRequest;
-            };
-            self.deserialized = sanitized;
-            self.status = .valid;
+        pub fn setRequestObjectOrInvalidate(self: *Self, request_object: ProtocolRequest) void {
+            self.deserialized = request_object;
+            self.status = .complete;
         }
 
         pub fn appendUntilProtocolDelimiter(self: *Self, raw_request: []const u8) ![]const u8 {
@@ -262,7 +256,7 @@ pub fn Response(comptime value: Protocol.Kind) type {
 
         pub fn setResponseObjectOrInvalidate(self: *Self, response_object: ProtocolResponse) void {
             self.deserialized = response_object;
-            self.status = .valid;
+            self.status = .complete;
         }
 
         pub fn appendUntilProtocolDelimiter(self: *Self, raw_request: []const u8) ![]const u8 {

@@ -1,29 +1,64 @@
 const std = @import("std");
-const Protocol = @import("Protocol.zig").Protocol;
+const net = std.net;
+const Protocol = @import("Protocol.zig");
+const Pong = @import("Pong.zig");
+const Config = @import("Config.zig");
+const Client = @import("Client.zig").Client;
 const posix = std.posix;
 const json = std.json;
 
-pub const Client = struct {
-    authenticated: bool = false,
-    name: []const u8,
-    role: []const u8,
-    time_ms: i64 = 0,
+pub const ClientServer = struct {
+    config: Config,
+    player: Pong.Player,
+    movement: ?u8,
+    credential: u64,
+    buffer: Protocol.Buffer(u8),
+    inner: Client,
 
-    pub fn init(name: []const u8, role: []const u8) Client {
+    pub fn init(allocator: std.mem.Allocator, config: Config, player: Pong.Player, address: net.Address, socket: posix.socket_t) ClientServer {
         return .{
-            .authenticated = false,
-            .name = name,
-            .role = role,
-            .time_ms = 0,
+            .config = config,
+            .player = player,
+            .movement = null,
+            .credential = 0,
+            .buffer = Protocol.Buffer(u8).init(allocator),
+            .inner = Client.init(allocator, address, socket),
         };
     }
 
-    pub fn makeAuthRequest(self: Client, allocator: std.mem.Allocator) ![]const u8 {
-        const auth_request: Protocol.Handshake.Request = .{
-            .client_id = self.name,
-            .timestamp = std.time.timestamp(),
+    pub fn deinit(self: *ClientServer) void {
+        self.client.deinit();
+        self.buffer.deinit();
+    }
+
+    pub fn makeAuthRequest(self: *ClientServer, gpa: std.mem.Allocator) ![]const u8 {
+        const request_object: Protocol.Handshake.Request = .{
+            .client_id = self.player.name,
+            .timestamp = self.now(),
         };
-        return try std.fmt.allocPrint(allocator, "{s}\n", .{auth_request});
+        var request = self.inner.getHandshakeRequest();
+        defer request.deinit();
+
+        request.setRequestObjectOrInvalidate(request_object);
+        return try gpa.dupe(u8, request.serialize() catch unreachable);
+    }
+
+    pub fn handleAuthResponse(self: *ClientServer, response_buffer: []const u8) !bool {
+        var handshake = self.inner.getHandshakeResponse();
+        defer handshake.deinit();
+
+        _ = try handshake.appendUntilProtocolDelimiter(response_buffer);
+        const response: Protocol.Handshake.Response = try handshake.deserialize();
+
+        if (response.status) {
+            self.credential = response.token;
+            std.debug.print("{}", .{response});
+        }
+        return true;
+    }
+
+    pub fn now(_: *ClientServer) i64 {
+        return std.time.milliTimestamp();
     }
 };
 
@@ -53,7 +88,6 @@ fn receiveMessage(socket: posix.socket_t, allocator: std.mem.Allocator) ![]const
             },
         };
 
-        posix.nanosleep(0, 1_000_000);
         total_read += rbytes;
 
         if (std.mem.indexOfScalar(u8, buff[0..total_read], Protocol.Delimiter[0]) != null) {
@@ -65,8 +99,10 @@ fn receiveMessage(socket: posix.socket_t, allocator: std.mem.Allocator) ![]const
 }
 
 pub fn main() !void {
-    const page_allocator = std.heap.page_allocator;
-    var arena_allocator: std.heap.ArenaAllocator = .init(page_allocator);
+    var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
+    defer _ = gpa.deinit();
+
+    var arena_allocator: std.heap.ArenaAllocator = .init(gpa.allocator());
     defer arena_allocator.deinit();
 
     const allocator = arena_allocator.allocator();
@@ -76,6 +112,7 @@ pub fn main() !void {
     const protocol = posix.IPPROTO.TCP;
     const socket = try posix.socket(address.any.family, tpe, protocol);
     defer posix.close(socket);
+    const nanosleep: u64 = (1_000_000_000 / @as(u64, Config.default.tickrate));
 
     while (true) {
         if (posix.connect(socket, &address.any, address.getOsSockLen())) {
@@ -89,9 +126,9 @@ pub fn main() !void {
     }
     std.log.info("{} : connected.", .{address});
 
-    var client: Client = .init("P1", "player1");
+    var client: ClientServer = .init(gpa.allocator(), Config.default, Pong.Player.p1, address, socket);
     const request = try client.makeAuthRequest(allocator);
-    defer allocator.free(request);
+    defer gpa.allocator().free(request);
     std.log.info("{} : request ready : {s}.", .{ address, request });
 
     // Append delimiter to the message
@@ -103,10 +140,12 @@ pub fn main() !void {
     // Send request
     std.log.info("{} : sending request. : {s}", .{ address, request });
     try sendMessage(socket, message_with_delimiter);
+    posix.nanosleep(0, nanosleep);
 
     // Receive response
     std.log.info("{} : waiting for response.", .{address});
     const response = try receiveMessage(socket, allocator);
+    _ = try client.handleAuthResponse(response);
     defer allocator.free(response);
     std.debug.print("{} : received: {s}\n", .{ address, response });
 }

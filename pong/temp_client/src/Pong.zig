@@ -14,13 +14,11 @@ const std = @import("std");
 const mem = std.mem;
 const json = std.json;
 const builtin = @import("builtin");
+const Config = @import("Config.zig");
 
 const Pong = @This();
 
-const opts: json.StringifyOptions = switch (builtin.mode) {
-    .Debug => .{ .whitespace = .indent_4 },
-    else => .{},
-};
+pub const Formatting: json.StringifyOptions = if (builtin.mode == .Debug) .{ .whitespace = .indent_4 } else .{};
 
 pub const Difficulty = enum {
     recruit,
@@ -90,30 +88,39 @@ pub const Vector2 = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        try json.stringify(self, opts, writer);
+        try json.stringify(self, Formatting, writer);
     }
 };
 
 pub const Paddle = struct {
     position: Vector2 = .default,
-    velocity: Vector2 = .default,
+    speed: f32 = 0,
     width: u32 = 0,
     height: u32 = 0,
 
     pub const default: Paddle = .{
         .position = Vector2.default,
-        .velocity = Vector2.default,
+        .speed = 0,
         .width = 0,
         .height = 0,
     };
 
-    pub fn init(position: Vector2, velocity: Vector2, width: u32, height: u32) Paddle {
+    pub fn init(position: Vector2, speed: u16, width: u32, height: u32) Paddle {
         return .{
             .position = position,
-            .velocity = velocity,
+            .speed = @floatFromInt(speed),
             .width = width,
             .height = height,
         };
+    }
+
+    pub fn initFromConfig(config: Config) Paddle {
+        return init(
+            Vector2.default,
+            config.paddle_speed,
+            config.vt_paddle_width,
+            config.vt_paddle_height,
+        );
     }
 
     pub fn format(
@@ -124,7 +131,7 @@ pub const Paddle = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        try json.stringify(self, opts, writer);
+        try json.stringify(self, Formatting, writer);
     }
 };
 
@@ -198,7 +205,7 @@ pub const Player = struct {
         ) !void {
             _ = fmt;
             _ = options;
-            try json.stringify(self, opts, writer);
+            try json.stringify(self, Formatting, writer);
         }
     };
 
@@ -210,6 +217,20 @@ pub const Player = struct {
         };
     }
 
+    pub const Identity = enum {
+        p1,
+        p2,
+        ai,
+    };
+
+    pub fn initFromConfig(config: Config, who: Identity) Player {
+        return switch (who) {
+            .p1 => init(config.player1_name, 0, Paddle.initFromConfig(config)),
+            .p2 => init(config.player2_name, 0, Paddle.initFromConfig(config)),
+            .ai => init("AI", 0, Paddle.initFromConfig(config)),
+        };
+    }
+
     pub fn format(
         self: @This(),
         comptime fmt: []const u8,
@@ -218,7 +239,7 @@ pub const Player = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        try json.stringify(self, opts, writer);
+        try json.stringify(self, Formatting, writer);
     }
 };
 
@@ -241,6 +262,14 @@ pub const Board = struct {
         };
     }
 
+    pub fn initFromConfig(config: Config) Board {
+        return init(
+            Vector2.default,
+            config.vt_board_width,
+            config.vt_board_height,
+        );
+    }
+
     pub fn format(
         self: @This(),
         comptime fmt: []const u8,
@@ -249,7 +278,7 @@ pub const Board = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        try json.stringify(self, opts, writer);
+        try json.stringify(self, Formatting, writer);
     }
 };
 
@@ -266,14 +295,24 @@ pub const Ball = struct {
         .speed = 0.0,
     };
 
-    pub fn init(position: Vector2, velocity: Vector2, radius: f32, speed: f32) Ball {
+    pub fn init(position: Vector2, velocity: Vector2, radius: u16, speed: u16) Ball {
         return .{
             .position = position,
             .velocity = velocity,
-            .radius = radius,
-            .speed = speed,
+            .radius = @floatFromInt(radius),
+            .speed = @floatFromInt(speed),
         };
     }
+
+    pub fn initFromConfig(config: Config) Ball {
+        return init(
+            Vector2.default,
+            Vector2.default,
+            config.vt_ball_radius,
+            config.ball_speed,
+        );
+    }
+
     pub fn format(
         self: @This(),
         comptime fmt: []const u8,
@@ -282,7 +321,7 @@ pub const Ball = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        try json.stringify(self, opts, writer);
+        try json.stringify(self, Formatting, writer);
     }
 };
 
@@ -292,8 +331,8 @@ pub const GameState = struct {
     ball: Ball = .default,
     player1: Player = .default,
     player2: Player = .default,
-    player1_events: []Player.Event = &[_]Player.Event{},
-    player2_events: []Player.Event = &[_]Player.Event{},
+    player1_events: Player.Event = .default,
+    player2_events: Player.Event = .default,
     timestamp: i64 = 0,
 
     pub const default: GameState = .{
@@ -302,8 +341,8 @@ pub const GameState = struct {
         .ball = Ball.default,
         .player1 = Player.p1,
         .player2 = Player.ai,
-        .player1_events = &[_]Player.Event{},
-        .player2_events = &[_]Player.Event{},
+        .player1_events = .default,
+        .player2_events = .default,
         .timestamp = 0,
     };
 
@@ -314,9 +353,31 @@ pub const GameState = struct {
             .ball = ball,
             .player1 = player1,
             .player2 = player2,
-            .player1_events = &[_]Player.Event{},
-            .player2_events = &[_]Player.Event{},
+            .player1_events = .default,
+            .player2_events = .default,
             .timestamp = 0,
+        };
+    }
+
+    pub fn initFromConfig(config: Config) GameState {
+        const board = Board.initFromConfig(config);
+        const ball = Ball.initFromConfig(config);
+        return switch (config.game_kind) {
+            .local_mp => gs: {
+                const p1 = Player.initFromConfig(config, .p1);
+                const p2 = Player.initFromConfig(config, .p2);
+                break :gs init(.local_mp, board, ball, p1, p2);
+            },
+            .local_ai => gs: {
+                const p1 = Player.initFromConfig(config, .p1);
+                const ai = Player.initFromConfig(config, .ai);
+                break :gs init(.local_ai, board, ball, p1, ai);
+            },
+            .remote_mp => gs: {
+                const p1 = Player.initFromConfig(config, .p1);
+                const p2 = Player.initFromConfig(config, .p2);
+                break :gs init(.remote_mp, board, ball, p1, p2);
+            },
         };
     }
 
@@ -328,6 +389,6 @@ pub const GameState = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        try json.stringify(self, opts, writer);
+        try json.stringify(self, Formatting, writer);
     }
 };

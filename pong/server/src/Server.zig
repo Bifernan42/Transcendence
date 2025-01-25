@@ -170,7 +170,7 @@ fn handleClientRequest(server: *Server, client: *Client) !void {
             defer request.deinit();
 
             result = server.handleHandshakeRequestConnected(client, &request) catch |err| {
-                std.log.err("{!}", .{err});
+                std.log.err("connected {!}", .{err});
                 client.transition(.disconnected);
                 return error.Closed;
             };
@@ -181,7 +181,7 @@ fn handleClientRequest(server: *Server, client: *Client) !void {
             defer request.deinit();
 
             result = server.handleHandshakeRequestDisconnected(client, &request) catch |err| {
-                std.log.err("{!}", .{err});
+                std.log.err("disconnected {!}", .{err});
                 client.transition(.disconnected);
                 return error.Closed;
             };
@@ -192,7 +192,7 @@ fn handleClientRequest(server: *Server, client: *Client) !void {
             defer request.deinit();
 
             result = server.handleConfigRequest(client, &request) catch |err| {
-                std.log.err("{!}", .{err});
+                std.log.err("authentificated {!}", .{err});
                 client.transition(.disconnected);
                 return error.Closed;
             };
@@ -204,7 +204,7 @@ fn handleClientRequest(server: *Server, client: *Client) !void {
             defer request.deinit();
 
             result = server.handleUpdateRequest(client, &request) catch |err| {
-                std.log.err("{!}", .{err});
+                std.log.err("waiting {!}", .{err});
                 client.transition(.disconnected);
                 return error.Closed;
             };
@@ -216,7 +216,7 @@ fn handleClientRequest(server: *Server, client: *Client) !void {
             defer request.deinit();
 
             result = server.handleUpdateRequest(client, &request) catch |err| {
-                std.log.err("{!}", .{err});
+                std.log.err("playing {!}", .{err});
                 client.transition(.disconnected);
                 return error.Closed;
             };
@@ -228,7 +228,7 @@ fn handleClientRequest(server: *Server, client: *Client) !void {
             defer request.deinit();
 
             result = server.handleAcknowledgementRequest(client, &request) catch |err| {
-                std.log.err("{!}", .{err});
+                std.log.err("done {!}", .{err});
                 client.transition(.disconnected);
                 return error.Closed;
             };
