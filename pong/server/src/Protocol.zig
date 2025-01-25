@@ -24,7 +24,13 @@ const Pong = @import("Pong.zig");
 
 const Protocol = @This();
 
-const opts: json.StringifyOptions = switch (builtin.mode) {
+pub const Kind = enum {
+    handshake,
+    config,
+    update,
+};
+
+pub const formating: json.StringifyOptions = switch (builtin.mode) {
     .Debug => .{ .whitespace = .indent_4 },
     else => .{},
 };
@@ -49,7 +55,7 @@ pub const Handshake = struct {
         ) !void {
             _ = fmt;
             _ = options;
-            try json.stringify(self, opts, writer);
+            try json.stringify(self, formating, writer);
         }
     };
 
@@ -72,7 +78,7 @@ pub const Handshake = struct {
         ) !void {
             _ = fmt;
             _ = options;
-            try json.stringify(self, opts, writer);
+            try json.stringify(self, formating, writer);
         }
     };
 };
@@ -95,7 +101,7 @@ pub const Config = struct {
         ) !void {
             _ = fmt;
             _ = options;
-            try json.stringify(self, opts, writer);
+            try json.stringify(self, formating, writer);
         }
     };
 
@@ -118,7 +124,7 @@ pub const Config = struct {
         ) !void {
             _ = fmt;
             _ = options;
-            try json.stringify(self, opts, writer);
+            try json.stringify(self, formating, writer);
         }
     };
 };
@@ -141,7 +147,7 @@ pub const Update = struct {
         ) !void {
             _ = fmt;
             _ = options;
-            try json.stringify(self, opts, writer);
+            try json.stringify(self, formating, writer);
         }
     };
 
@@ -162,7 +168,7 @@ pub const Update = struct {
         ) !void {
             _ = fmt;
             _ = options;
-            try json.stringify(self, opts, writer);
+            try json.stringify(self, formating, writer);
         }
     };
 };

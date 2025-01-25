@@ -19,7 +19,7 @@ const time = std.time;
 const Protocol = @import("Protocol.zig");
 const Client = @import("Client.zig");
 const Config = @import("Config.zig");
-const String = @import("String.zig").String;
+const String = @import("Request.zig");
 const Server = @This();
 
 gpa: std.mem.Allocator,
@@ -136,8 +136,7 @@ fn handleClientRequest(self: *Server, client: *Client) !void {
     const allocator = self.request_arena.allocator();
     defer _ = self.request_arena.reset(.retain_capacity);
 
-    const message = try client.getMessage(allocator) orelse return;
-
+    const message = "";
     if (message.len == 0) {
         log.info("Empty message received, closing connection.", .{});
         self.removeClient(client);
@@ -148,6 +147,7 @@ fn handleClientRequest(self: *Server, client: *Client) !void {
 
     const parsed_request = try json.parseFromSlice(Protocol.Handshake.Request, allocator, message, .{});
     try self.processRequest(client, parsed_request.value);
+    @panic("remmber to come refactor here");
 }
 
 fn processRequest(self: *Server, client: *Client, request: Protocol.Handshake.Request) !void {
