@@ -4,7 +4,7 @@ if [ "postgres" = "postgres" ]
 then
     echo "Waiting for postgres..."
 
-    while ! nc -z $DB_HOST $DB_PORT 5432; do
+    while ! nc -z postgres 5432; do
       sleep 0.1
     done
 
