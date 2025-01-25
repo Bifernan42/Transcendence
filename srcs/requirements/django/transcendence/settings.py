@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'trans',
+    'transcendence.trans',
 ]
 
 MIDDLEWARE = [
@@ -81,7 +81,7 @@ DATABASES = {
         'NAME': 'transcendencedb',
         'USER': 'admin',
         'PASSWORD': 'admin_password',
-        'HOST': 'localhost',
+        'HOST': 'postgres',
         'PORT': '5432',
     }
 }
