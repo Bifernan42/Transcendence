@@ -32,8 +32,12 @@ pub fn init(address: net.Address, socket: posix.socket_t) Stream {
 pub fn readRequestUntilComplete(stream: *Stream, request: *Request) !bool {
     var buffer: [64]u8 = undefined;
     while (!request.isComplete()) {
-        const rbytes = posix.recv(stream.socket, buffer[0..], 0) catch |err| switch (err) {
-            error.WouldBlock => continue,
+        const rbytes = posix.recv(stream.socket, buffer[0..], 0) catch |err| {
+            std.log.err("error {!}", .{err});
+            switch (err) {
+                error.WouldBlock => return false,
+                else => return err,
+            }
         };
 
         if (rbytes == 0) {
@@ -45,13 +49,19 @@ pub fn readRequestUntilComplete(stream: *Stream, request: *Request) !bool {
 }
 pub fn readResponseUntilComplete(stream: *Stream, response: *Response) !bool {
     var buffer: [64]u8 = undefined;
+    std.debug.print("{s}", .{response.buffer.items});
     while (!response.isComplete()) {
-        const rbytes = posix.recv(stream.socket, buffer[0..], 0) catch |err| switch (err) {
-            error.WouldBlock => continue,
-            else => return err,
+        std.debug.print("{s}", .{response.buffer.items});
+        const rbytes = posix.recv(stream.socket, buffer[0..], 0) catch |err| {
+            std.log.err("error {!}", .{err});
+            switch (err) {
+                error.WouldBlock => return false,
+                else => return err,
+            }
         };
 
         if (rbytes == 0) {
+            std.debug.print("{s}", .{response.buffer.items});
             return response.isComplete();
         }
         try response.appendSlice(buffer[0..]);
@@ -64,9 +74,36 @@ pub fn sendRequest(stream: *Stream, request: *Request) !bool {
         const len = buffer.len;
         var total: usize = 0;
         while (true) {
-            const amount = posix.send(stream.socket, buffer[total..], 0) catch |err| switch (err) {
-                error.WouldBlock => continue,
-                else => return err,
+            const amount = posix.send(stream.socket, buffer[total..], 0) catch |err| {
+                std.log.err("error {!}", .{err});
+                switch (err) {
+                    error.WouldBlock => return false,
+                    else => return err,
+                }
+            };
+            total += amount;
+
+            if (amount == 0 and total >= len) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    } else {
+        return false;
+    }
+}
+pub fn sendResponse(stream: *Stream, response: *Response) !bool {
+    if (response.serialized()) |buffer| {
+        const len = buffer.len;
+        var total: usize = 0;
+        while (true) {
+            const amount = posix.send(stream.socket, buffer[total..], 0) catch |err| {
+                std.log.err("error {!}", .{err});
+                switch (err) {
+                    error.WouldBlock => return false,
+                    else => return err,
+                }
             };
             total += amount;
 

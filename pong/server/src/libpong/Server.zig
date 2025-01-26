@@ -121,8 +121,10 @@ pub fn accept(server: *Server) !Connection {
         .events = posix.POLL.IN,
         .revents = 0,
     };
+    const connection = Connection.init(server.allocator, address, socket);
     try server.pollfds.append(server.allocator, client_poll);
-    return Connection.init(server.allocator, address, socket);
+    try server.clients.append(server.allocator, connection);
+    return connection;
 }
 
 pub fn removeConnection(server: *Server, connection: Connection) void {
@@ -132,4 +134,13 @@ pub fn removeConnection(server: *Server, connection: Connection) void {
 
 pub fn getPollfds(server: *Server) []posix.pollfd {
     return server.pollfds.items[0..server.pollfds.items.len];
+}
+
+pub fn getConnection(server: *Server, socket: posix.socket_t) ?*Connection {
+    for (server.clients.items) |*conn| {
+        if (conn.stream.socket == socket) {
+            return conn;
+        }
+    }
+    return null;
 }

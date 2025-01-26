@@ -154,9 +154,9 @@ pub const Empty = struct {
 pub const Auth = struct {
     pub const Request = struct {
         head: Header = .auth,
-        role: []const u8,
-        name: []const u8,
-        pass: []const u8,
+        role: []const u8 = "",
+        name: []const u8 = "",
+        pass: []const u8 = "",
 
         pub fn format(
             self: @This(),
