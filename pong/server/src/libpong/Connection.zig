@@ -20,10 +20,12 @@ const Connection = @This();
 pub const ConnectionOption = struct {};
 
 stream: Stream = undefined,
+options: ConnectionOption,
 
-pub fn init(address: net.Address, socket: posix.socket_t) Connection {
+pub fn init(address: net.Address, socket: posix.socket_t, options: ConnectionOption) Connection {
     return .{
         .stream = Stream.init(address, socket),
+        .options = options,
     };
 }
 

@@ -26,4 +26,9 @@ pub fn main() !void {
 
     var server = lib.Server.init(gpa.allocator(), .{});
     defer server.deinit();
+
+    try server.listen(.{
+        .ip = "127.0.0.1",
+        .port = 8080,
+    });
 }

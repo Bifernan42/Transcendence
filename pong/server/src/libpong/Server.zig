@@ -26,7 +26,13 @@ const root = @import("root.zig");
 const Server = @This();
 
 pub const ServerOptions = struct {};
-pub const ListenOptions = struct {};
+pub const ListenOptions = struct {
+    ip: []const u8 = "127.0.0.1",
+    port: u16 = 8080,
+    sock_type: u32 = posix.SOCK.STREAM | posix.SOCK.NONBLOCK,
+    sock_prot: u32 = posix.IPPROTO.TCP,
+    max_conn: u31 = 2,
+};
 
 allocator: mem.Allocator,
 address: net.Address,
@@ -63,15 +69,15 @@ pub fn listen(server: *Server, options: ListenOptions) !void {
 
     const socket = try posix.socket(
         address.any.family,
-        options.socket_type,
-        options.protocol,
+        options.sock_type,
+        options.sock_prot,
     );
     errdefer posix.close(socket);
 
     try posix.setsockopt(
         socket,
         posix.SOL.SOCKET,
-        options.getOpts(),
+        posix.SO.REUSEADDR | posix.SO.REUSEPORT,
         std.mem.asBytes(&@as(c_int, 1)),
     );
 
@@ -83,7 +89,7 @@ pub fn listen(server: *Server, options: ListenOptions) !void {
 
     try posix.listen(
         socket,
-        options.max_connection,
+        options.max_conn,
     );
 
     server.socket = socket;

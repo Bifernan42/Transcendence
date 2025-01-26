@@ -12,10 +12,13 @@
 
 const std = @import("std");
 
-pub const Server = @import("Server.zig");
+pub const Client = @import("Client.zig");
+pub const ClientOptions = Client.ClientOptions;
+pub const Connection = @import("Connection.zig");
+pub const ConnectionOptions = Connection.ConnectionOption;
+pub const protocol = @import("protocol.zig");
 pub const Request = @import("Request.zig");
 pub const Response = @import("Response.zig");
-pub const protocol = @import("protocol.zig");
-pub const Client = @import("Client.zig");
+pub const Server = @import("Server.zig");
+pub const ServerOptions = Server.ServerOptions;
 pub const Stream = @import("Stream.zig");
-pub const Connection = @import("Connection.zig");

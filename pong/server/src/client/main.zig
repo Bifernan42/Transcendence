@@ -25,7 +25,26 @@ pub fn main() !void {
     var gpa: heap.GeneralPurposeAllocator(.{}) = .init;
     defer _ = gpa.deinit();
 
-    // const address = try net.Address.parseIp("127.0.0.1", 8080);
-    var client = Client.init(gpa.allocator(), .{});
+    var client = try Client.init(gpa.allocator(), .{
+        .ip = "127.0.0.1",
+        .port = 8080,
+    });
     defer client.deinit();
+
+    try client.openSocket(.{
+        .reuse_port = true,
+        .reuse_addr = true,
+        .blocking = false,
+    });
+
+    while (true) {
+        client.connectSocket() catch |err| switch (err) {
+            error.WouldBlock => continue,
+            else => return err,
+        };
+        break;
+    }
+
+    try client.sendAuthRequest();
+    try client.getAuthResponse();
 }
