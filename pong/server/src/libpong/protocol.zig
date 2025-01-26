@@ -92,4 +92,14 @@ pub const Authentification = packed struct {
     };
 };
 
-pub const Update = packed struct {};
+pub const Update = packed struct {
+    pub const Request = packed struct {
+        header: Header = .init,
+        token_id: u64,
+    };
+
+    pub const Response = packed struct {
+        header: Header = .init,
+        temp: u8 = 1,
+    };
+};

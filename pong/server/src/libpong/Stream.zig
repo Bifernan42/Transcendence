@@ -1,31 +1,36 @@
 // ************************************************************************** //
 //                                                                            //
 //                                                        :::      ::::::::   //
-//   main.zig                                           :+:      :+:    :+:   //
+//   Stream.zig                                         :+:      :+:    :+:   //
 //                                                    +:+ +:+         +:+     //
 //   By: pollivie <pollivie.student.42.fr>          +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
-//   Created: 2025/01/26 08:11:40 by pollivie          #+#    #+#             //
-//   Updated: 2025/01/26 08:11:41 by pollivie         ###   ########.fr       //
+//   Created: 2025/01/26 15:51:39 by pollivie          #+#    #+#             //
+//   Updated: 2025/01/26 15:51:40 by pollivie         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 const std = @import("std");
-const lib = @import("libpong");
-const prot = lib.protocol;
-const heap = std.heap;
-const mem = std.mem;
-const log = std.log;
-const json = std.json;
 const net = std.net;
+const mem = std.mem;
+const heap = std.heap;
 const posix = std.posix;
-const Client = lib.Client;
+const Stream = @This();
+pub const StreamOption = struct {};
 
-pub fn main() !void {
-    var gpa: heap.GeneralPurposeAllocator(.{}) = .init;
-    defer _ = gpa.deinit();
+address: net.Address,
+socket: posix.socket_t,
 
-    // const address = try net.Address.parseIp("127.0.0.1", 8080);
-    var client = Client.init(gpa.allocator(), .{});
-    defer client.deinit();
+pub fn init(address: net.Address, socket: posix.socket_t) Stream {
+    return .{
+        .address = address,
+        .socket = socket,
+    };
+}
+
+pub fn deinit(self: *Stream) void {
+    if (self.socket != -1) {
+        posix.close(self.socket);
+    }
+    self.* = undefined;
 }

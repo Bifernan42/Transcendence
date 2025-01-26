@@ -24,7 +24,6 @@ pub fn main() !void {
     var gpa: heap.GeneralPurposeAllocator(.{}) = .init;
     defer _ = gpa.deinit();
 
-    const address = try net.Address.parseIp("127.0.0.1", 8080);
-    var server = lib.Server.init(gpa.allocator(), address, .{});
+    var server = lib.Server.init(gpa.allocator(), .{});
     defer server.deinit();
 }
