@@ -31,4 +31,26 @@ pub fn main() !void {
         .ip = "127.0.0.1",
         .port = 8080,
     });
+
+    try run(&server);
+}
+
+pub fn run(server: *lib.Server) !void {
+    while (true) {
+        log.info("{} waiting on events...", .{server.address});
+        const polling = server.getPollfds();
+        _ = try posix.poll(polling, -1);
+
+        if (polling[0].revents != 0) {
+            const connection = server.accept() catch |err| {
+                log.err("server failed to accept new client {!}", .{err});
+                continue;
+            };
+            log.info("server accepted new connection : {}", .{connection});
+        }
+
+        for (polling[1..]) |client| {
+            log.info("client : {any}\n", .{client});
+        }
+    }
 }

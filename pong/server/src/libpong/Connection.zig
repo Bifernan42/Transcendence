@@ -16,19 +16,41 @@ const net = std.net;
 const mem = std.mem;
 const posix = std.posix;
 const heap = std.heap;
+const InternalStates = @import("protocol.zig").ClientInfo;
+const Request = @import("Request.zig");
+const Response = @import("Response.zig");
 const Connection = @This();
-pub const ConnectionOption = struct {};
 
-stream: Stream = undefined,
-options: ConnectionOption,
+gpa: mem.Allocator,
+response: Response,
+request: Request,
+stream: Stream,
+states: InternalStates,
 
-pub fn init(address: net.Address, socket: posix.socket_t, options: ConnectionOption) Connection {
+pub fn init(gpa: mem.Allocator, address: net.Address, socket: posix.socket_t) Connection {
     return .{
+        .gpa = gpa,
         .stream = Stream.init(address, socket),
-        .options = options,
+        .request = Request.init(gpa),
+        .response = Response.init(gpa),
+        .states = .{},
     };
 }
 
 pub fn deinit(self: *Connection) void {
+    self.response.deinit();
+    self.request.deinit();
     self.stream.deinit();
+}
+
+pub fn format(
+    self: @This(),
+    comptime fmt: []const u8,
+    options: std.fmt.FormatOptions,
+    writer: anytype,
+) !void {
+    _ = fmt;
+    _ = options;
+
+    try writer.print("{}", .{self.stream.address});
 }

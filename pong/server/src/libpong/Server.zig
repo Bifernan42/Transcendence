@@ -103,3 +103,33 @@ pub fn listen(server: *Server, options: ListenOptions) !void {
 
     try server.pollfds.append(server.allocator, server_poll);
 }
+
+pub fn accept(server: *Server) !Connection {
+    var address: net.Address = undefined;
+    var address_len: posix.socklen_t = @sizeOf(net.Address);
+
+    const socket = try posix.accept(
+        server.socket,
+        &address.any,
+        &address_len,
+        posix.SOCK.NONBLOCK,
+    );
+    errdefer posix.close(socket);
+
+    const client_poll: posix.pollfd = .{
+        .fd = socket,
+        .events = posix.POLL.IN,
+        .revents = 0,
+    };
+    try server.pollfds.append(server.allocator, client_poll);
+    return Connection.init(server.allocator, address, socket);
+}
+
+pub fn removeConnection(server: *Server, connection: Connection) void {
+    _ = server;
+    _ = connection;
+}
+
+pub fn getPollfds(server: *Server) []posix.pollfd {
+    return server.pollfds.items[0..server.pollfds.items.len];
+}
