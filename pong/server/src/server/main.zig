@@ -18,6 +18,7 @@ const mem = std.mem;
 const net = std.net;
 const cli = lib.cli;
 const log = std.log;
+const posix = std.posix;
 
 pub fn main() !void {
     var gpa: heap.GeneralPurposeAllocator(.{}) = .init;
@@ -27,7 +28,7 @@ pub fn main() !void {
     defer argv.deinit();
 
     const params: cli.CliFlags = cli.parseCliFlags(&argv);
-    log.debug("{any}", .{params});
+    log.debug("{}", .{params});
 
     const address: net.Address = try .parseIp(params.ip, params.port);
     var server = try address.listen(.{
@@ -43,17 +44,15 @@ pub fn main() !void {
 
     const connection = try server.accept();
     while (true) {
-        const msg = std.mem.asBytes(&state);
+        const msg = std.mem.asBytes(&state).*;
         var buff: [lib.MessageTotalBytes]u8 = undefined;
 
-        const wlne = try connection.stream.write(msg);
-        log.debug("{} sent : {d} bytes [{}]", .{ server.listen_address, wlne, state });
-
-        std.posix.nanosleep(1, 0);
+        const wlen = try connection.stream.write(&msg);
+        log.debug("{} sent : {d} bytes [{d}]", .{ server.listen_address, wlen, msg[0..wlen] });
 
         const rlen = try connection.stream.read(&buff);
         state = mem.bytesAsValue(lib.Message, buff[0..]).*;
 
-        log.debug("{} received : {d} bytes [{s}]", .{ server.listen_address, rlen, state });
+        log.debug("{} received : {d} bytes [{d}]", .{ server.listen_address, rlen, msg[0..rlen] });
     }
 }

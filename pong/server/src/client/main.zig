@@ -38,16 +38,15 @@ pub fn main() !void {
     state.curr_state.player1.paddle.hitbox = params.paddle.hitbox;
 
     while (true) {
-        const msg = std.mem.asBytes(&state);
+        const msg = std.mem.asBytes(&state).*;
         var buff: [lib.MessageTotalBytes]u8 = undefined;
 
         const rlen = try stream.read(&buff);
-        log.debug("{} received : {d} bytes [{}]", .{ stream, rlen, state });
+        log.debug("{} received : {d} bytes [{X}]", .{ stream, rlen, msg[0..rlen] });
 
-        state = mem.bytesAsValue(lib.Message, buff[0..]).*;
+        state = mem.bytesAsValue(lib.Message, buff[0..rlen]).*;
 
-        const wlne = try stream.write(msg);
-        log.debug("{} sent : {d} bytes [{}]", .{ stream, wlne, state });
-        std.posix.nanosleep(1, 0);
+        const wlen = try stream.write(&msg);
+        log.debug("{} sent : {d} bytes [{X}]", .{ stream, wlen, msg[0..wlen] });
     }
 }
