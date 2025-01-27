@@ -38,7 +38,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(client);
 
     const server = b.addExecutable(.{
-        .name = "ssps",
+        .name = "server",
         .root_module = server_mod,
     });
     server.linkLibrary(libpong);
