@@ -12,6 +12,8 @@ from rest_framework import status
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
+from .models import CustomUserTrans
+
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -26,10 +28,10 @@ def registerView(request):
         if not username or not password:
             return Response({"detail": "Username and password are required"}, status=status.HTTP_400_BAD_REQUEST)
         
-        if User.objects.filter(username=username).exists():
+        if CustomUserTrans.objects.filter(username=username).exists():
             return Response({"detail": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            user = User.objects.create_user(username=username, password=password)
+            user = CustomUserTrans.objects.create_user(username=username, password=password)
             user.save()
             login(request, user)
             refresh = RefreshToken.for_user(user)

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'transcendence.trans',
+    'phonenumber_field',
 ]
 
 MIDDLEWARE = [
@@ -165,3 +166,5 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
     'SLIDING_TOKEN_LIFETIME': timedelta(days=30),
 }
+
+AUTH_USER_MODEL = 'trans.CustomUserTrans'
