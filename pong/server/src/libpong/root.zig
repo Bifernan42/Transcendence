@@ -29,3 +29,5 @@ pub const Surface = protocol.Surface;
 pub const Vector2 = protocol.Vector2;
 pub const MessageTotalBytes = protocol.MessageTotalBytes;
 pub const MessageBackingInteger = protocol.MessageBackingInteger;
+pub const Server = @import("Server.zig");
+pub const Client = @import("Client.zig");

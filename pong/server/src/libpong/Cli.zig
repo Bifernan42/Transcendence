@@ -100,3 +100,9 @@ pub fn parseCliFlags(args: *process.ArgIterator) CliFlags {
     }
     return flags;
 }
+
+pub fn initState(state: *lib.protocol.Message, params: CliFlags) void {
+    state.curr_state.board = params.board;
+    state.curr_state.kind = params.kind;
+    state.curr_state.player1.paddle.hitbox = params.paddle.hitbox;
+}

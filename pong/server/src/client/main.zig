@@ -39,13 +39,6 @@ pub fn main() !void {
 
     while (true) {
         const msg = std.mem.asBytes(&state).*;
-        var buff: [lib.MessageTotalBytes]u8 = undefined;
-
-        const rlen = try stream.read(&buff);
-        log.debug("{} received : {d} bytes [{X}]", .{ stream, rlen, msg[0..rlen] });
-
-        state = mem.bytesAsValue(lib.Message, buff[0..rlen]).*;
-
         const wlen = try stream.write(&msg);
         log.debug("{} sent : {d} bytes [{X}]", .{ stream, wlen, msg[0..wlen] });
     }
