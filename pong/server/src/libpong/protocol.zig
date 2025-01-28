@@ -212,7 +212,7 @@ pub const Player = packed struct(u96) {
     padding: u16 = 0,
 
     pub const default_p1: Player = .{
-        .state = .connected,
+        .state = .none,
         .role = .player1,
         .move = .p1_noop,
         .score = ._0,
@@ -221,7 +221,7 @@ pub const Player = packed struct(u96) {
     };
 
     pub const default_p2: Player = .{
-        .state = .connected,
+        .state = .none,
         .role = .player2,
         .move = .p2_noop,
         .score = ._0,
@@ -276,7 +276,7 @@ pub const Paddle = packed struct(u64) {
     pub const default_right: Paddle = .{
         .hitbox = .{
             .position = .{
-                .x = 1020,
+                .x = 1024 - 8 - 4,
                 .y = 256 - 32,
             },
             .width = 8,
@@ -476,13 +476,11 @@ pub const Pong = packed struct(u512) {
     }
 };
 
-pub const Message = packed struct(u1024) {
-    prev_state: Pong = Pong.zero,
-    curr_state: Pong = Pong.zero,
+pub const Message = packed struct(u512) {
+    state: Pong = Pong.zero,
 
     pub const zero: Message = .{
-        .prev_state = Pong.zero,
-        .curr_state = Pong.zero,
+        .state = Pong.zero,
     };
 
     pub fn format(
@@ -498,4 +496,5 @@ pub const Message = packed struct(u1024) {
 };
 
 pub const MessageTotalBytes: usize = @sizeOf(Message);
-pub const MessageBackingInteger: type = u1024;
+pub const MessageBackingInteger: type = u512;
+pub const MessageBufferCapacity: usize = 2;

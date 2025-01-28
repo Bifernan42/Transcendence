@@ -15,16 +15,17 @@ const mem = std.mem;
 const fmt = std.fmt;
 const heap = std.heap;
 const process = std.process;
-const lib = @import("root.zig");
+const protocol = @import("protocol.zig");
+
 const Cli = @This();
 
 pub const CliFlags = struct {
     ip: []const u8 = "127.0.0.1",
     port: u16 = 8080,
     tickrate: u16 = 60,
-    board: lib.Board = .default,
-    kind: lib.PongKind = .default,
-    paddle: lib.Paddle = .default_dim,
+    board: protocol.Board = .default,
+    kind: protocol.PongKind = .default,
+    paddle: protocol.Paddle = .default_dim,
     padd_speed: u16 = 1,
     ball_speed: u16 = 1,
     max_score: u8 = 1,
@@ -33,9 +34,9 @@ pub const CliFlags = struct {
         .ip = "127.0.0.1",
         .port = 8080,
         .tickrate = 60,
-        .board = lib.Board.default,
+        .board = protocol.Board.default,
         .kind = .local_ai,
-        .paddle = lib.Paddle.default_dim,
+        .paddle = protocol.Paddle.default_dim,
         .padd_speed = 1,
         .ball_speed = 1,
         .max_score = 1,
@@ -101,7 +102,7 @@ pub fn parseCliFlags(args: *process.ArgIterator) CliFlags {
     return flags;
 }
 
-pub fn initState(state: *lib.protocol.Message, params: CliFlags) void {
+pub fn initState(state: *protocol.protocol.Message, params: CliFlags) void {
     state.curr_state.board = params.board;
     state.curr_state.kind = params.kind;
     state.curr_state.player1.paddle.hitbox = params.paddle.hitbox;

@@ -4,6 +4,15 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const raylib_dep = b.dependency("raylib-zig", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const raylib = raylib_dep.module("raylib"); // main raylib module
+    const raygui = raylib_dep.module("raygui"); // raygui module
+    const raylib_artifact = raylib_dep.artifact("raylib");
+
     const lib_mod = b.createModule(.{
         .root_source_file = b.path("src/libpong/root.zig"),
         .target = target,
@@ -14,8 +23,12 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/client/main.zig"),
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
     });
+    client_mod.addImport("raylib", raylib);
+    client_mod.addImport("raygui", raygui);
     client_mod.addImport("libpong", lib_mod);
+    client_mod.linkLibrary(raylib_artifact);
 
     const server_mod = b.createModule(.{
         .root_source_file = b.path("src/server/main.zig"),
@@ -33,8 +46,11 @@ pub fn build(b: *std.Build) void {
     const client = b.addExecutable(.{
         .name = "client",
         .root_module = client_mod,
+        .link_libc = true,
     });
+    client.linkLibC();
     client.linkLibrary(libpong);
+    client.linkLibrary(raylib_artifact);
     b.installArtifact(client);
 
     const server = b.addExecutable(.{

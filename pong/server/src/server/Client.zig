@@ -11,12 +11,12 @@
 // ************************************************************************** //
 
 const std = @import("std");
-const root = @import("root.zig");
+const lib = @import("libpong");
 const process = std.process;
 const heap = std.heap;
 const mem = std.mem;
 const net = std.net;
-const cli = root.cli;
+const cli = lib.cli;
 const log = std.log;
 const posix = std.posix;
 
@@ -36,9 +36,10 @@ addr: net.Address,
 mode: Mode,
 
 pub fn init(gpa: mem.Allocator, addr: net.Address, sock: posix.socket_t) !Client {
-    var response = try std.RingBuffer.init(gpa, 64 * root.MessageTotalBytes);
+    const total_capacity = lib.MessageTotalBytes * lib.MessageBufferCapacity;
+    var response = try std.RingBuffer.init(gpa, total_capacity);
     errdefer response.deinit(gpa);
-    var request = try std.RingBuffer.init(gpa, 64 * root.MessageTotalBytes);
+    var request = try std.RingBuffer.init(gpa, total_capacity);
     errdefer request.deinit(gpa);
     return .{
         .gpa = gpa,
@@ -60,15 +61,15 @@ pub fn deinit(self: *Client) void {
 }
 
 pub fn recv(self: *Client) !void {
-    var buffer: [root.MessageTotalBytes]u8 = undefined;
+    var buffer: [lib.MessageTotalBytes]u8 = undefined;
     const rbytes = try posix.recv(self.sock, buffer[0..], 0);
-    if (rbytes != root.MessageTotalBytes) {
+    if (rbytes != lib.MessageTotalBytes) {
         return error.partialRead;
     }
     self.req.writeSliceAssumeCapacity(buffer[0..]);
 }
 
-pub fn getRequest(self: *Client, out_message: *[root.MessageTotalBytes]u8) bool {
+pub fn getRequest(self: *Client, out_message: *[lib.MessageTotalBytes]u8) bool {
     if (self.req.read_index < out_message.len) {
         return false;
     }
@@ -77,19 +78,19 @@ pub fn getRequest(self: *Client, out_message: *[root.MessageTotalBytes]u8) bool 
 }
 
 pub fn putResponse(self: *Client, response: []u8) bool {
-    if (response.len != root.MessageTotalBytes) {
+    if (response.len != lib.MessageTotalBytes) {
         return false;
     }
-    self.res.writeSliceAssumeCapacity(response[0..root.MessageTotalBytes]);
+    self.res.writeSliceAssumeCapacity(response[0..lib.MessageTotalBytes]);
     return true;
 }
 
 pub fn send(self: *Client) !void {
-    var buffer: [root.MessageTotalBytes]u8 = undefined;
-    try self.res.readFirst(buffer[0..], root.MessageTotalBytes);
+    var buffer: [lib.MessageTotalBytes]u8 = undefined;
+    try self.res.readLast(buffer[0..], lib.MessageTotalBytes);
     const wbytes = try posix.send(self.sock, buffer[0..], 0);
 
-    if (wbytes != root.MessageTotalBytes) {
+    if (wbytes != lib.MessageTotalBytes) {
         return error.partialWrite;
     }
 }
