@@ -31,7 +31,7 @@ def registerView(request):
         if CustomUserTrans.objects.filter(username=username).exists():
             return Response({"detail": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
         if CustomUserTrans.objects.filter(email=email).exists():
-            return Response({"detail": "Email already in use."}), status=400)
+            return Response({"detail": "Email already in use."}, status=status.HTTP_400_BAD_REQUEST)
         else:
             user = CustomUserTrans.objects.create_user(username=username, password=password, email=email, phone_number=phone_number)
             user.save()
@@ -75,6 +75,8 @@ class LogoutView(APIView):
         return Response({"detail" : "Successfully logged out."}, status=status.HTTP_200_OK)
 
 # que des users authenitcated peuvent appeller la fonction (a tester)
+@api_view(['POST'])
+@permission_classes([AllowAny])
 @login_required
 def add_friend(request):
     # Pour la requette HTTP method="POST" dans l'HTML?
@@ -82,7 +84,8 @@ def add_friend(request):
         # normalement, request contient le user qui l'a envoye et name='friend_user' ou 'friend_username'
         try:
             user = request.user
-            friend = User.objects.get(username=request.POST.get('friend_user'))
+            username = request.data.get('friend_user')
+            friend = CustomUserTrans.objects.get(username=request.data.get('friend_user'))
 
             #check si deja amis
             if Friendship.objects.filter(user=user, friend=friend, accepted=True).exists() or \
@@ -94,10 +97,10 @@ def add_friend(request):
                     return Response({"detail": "Friend request already sent or received."}, status=400)
             # success     
             Friendship.objects.create(user=user, friend=friend)
-            return Response({"detail"}: f"Friend request successfully send to {friend.username}")
+            return Response({"detail": f"Friend request successfully send to {friend.username}"}, status=status.HTTP_200_OK)
 
-        except User.DoesNotExist:
-            return Response({"error": "User does not exist."}, status=400)
+        except CustomUserTrans.DoesNotExist:
+            return Response({"error": f"User does not exist.{username}"}, status=400)
         except ValueError as e:
             return Response({"error": str(e)}, status=400)
 
