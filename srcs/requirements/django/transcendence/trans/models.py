@@ -42,7 +42,7 @@ class CustomUserTrans(AbstractUser):
     objects = CustomUserTransManager()
 
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['email']
+    REQUIRED_FIELDS = ['email', 'phone_number']
 
     def __str__(self):
         return self.username

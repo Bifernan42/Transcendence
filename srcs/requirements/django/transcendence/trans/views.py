@@ -24,14 +24,15 @@ class LoginSerializer(serializers.Serializer):
 def registerView(request):
     if (request.method == "POST"):
         username = request.data.get('username')
+        email = request.data.get('email')
         password = request.data.get('password')
-        if not username or not password:
-            return Response({"detail": "Username and password are required"}, status=status.HTTP_400_BAD_REQUEST)
-        
+        phone_number = request.data.get('phone_number')
+        if not username or not password or not email or not phone_number:
+            return Response({"detail": "Username, email, phone number, and password are required"}, status=status.HTTP_400_BAD_REQUEST)
         if CustomUserTrans.objects.filter(username=username).exists():
             return Response({"detail": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            user = CustomUserTrans.objects.create_user(username=username, password=password)
+            user = CustomUserTrans.objects.create_user(username=username, password=password, email=email, phone_number=phone_number)
             user.save()
             login(request, user)
             refresh = RefreshToken.for_user(user)
