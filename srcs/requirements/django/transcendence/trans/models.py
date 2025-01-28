@@ -46,3 +46,17 @@ class CustomUserTrans(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+# class History(models.Model):
+#     user = models.ForeignKey(CustomUserTrans.id)
+#     user_2 = models.ForeignKey(CustomUserTrans.id)
+#     score = models.IntegerField()
+#     score_2 = models.IntegerField()
+#     status = models.CharField(max_length=30)
+#     duration = models.DurationField()
+#     date_played = models.DateTimeField(auto_now_add=True)
+    
+
+#     def __str__(self):
+#         return f"History between {self.user.username} and {self.User_2.username}"
