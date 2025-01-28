@@ -47,6 +47,17 @@ class CustomUserTrans(AbstractUser):
     def __str__(self):
         return self.username
 
+class Friendship(models.Model):
+    user = models.ForeignKey(User, related_name="friendship_requests_sent", on_delete=models.CASCADE)
+    friend = models.ForeignKey(User, related_name="friendship_requests_received", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"{self.user.username} is friends with {self.friend.username}"
+
+
+
 
 # class History(models.Model):
 #     user = models.ForeignKey(CustomUserTrans.id)
