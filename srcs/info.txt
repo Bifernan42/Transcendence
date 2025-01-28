@@ -1,0 +1,5 @@
+super_user : 
+login : admin
+password : admin_password
+email : admin@example.com
+

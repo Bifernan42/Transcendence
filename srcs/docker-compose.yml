@@ -1,3 +1,4 @@
+version : '3.8'
 services:
   django:
     container_name: django
@@ -5,7 +6,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgres://admin:admin_password@postgres:5432/TranscendenceDB
+      - DATABASE_URL=postgres://admin:admin_password@postgres:5432/transcendencedb
       - DB_HOST=postgres
       - DB_PORT=5432
     depends_on:
@@ -26,6 +27,7 @@ services:
       POSTGRES_DB: transcendencedb
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      
     networks:
       - transcendence
 

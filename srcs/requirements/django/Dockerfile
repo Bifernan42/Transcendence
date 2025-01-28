@@ -13,6 +13,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH="/app"
 
+RUN apt-get update
+RUN apt-get install netcat-traditional
 # Upgrade pip
 RUN pip install --upgrade pip 
 
