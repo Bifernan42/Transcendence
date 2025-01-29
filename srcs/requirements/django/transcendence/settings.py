@@ -164,7 +164,7 @@ SIMPLE_JWT = {
     'JTI_CLAIM': 'jti',
 
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
-    'SLIDING_TOKEN_LIFETIME': tigcam "removed venv files, reset migrations (not fixed), updated requirements.txt" medelta(days=30),
+    'SLIDING_TOKEN_LIFETIME': timedelta(days=30),
 }
 
 AUTH_USER_MODEL = 'trans.CustomUserTrans'
