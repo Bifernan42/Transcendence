@@ -1,5 +1,11 @@
+asgiref==3.8.1
 Django>=4.2
-psycopg2-binary>=2.9  # Pour PostgreSQL
-djangorestframework~=3.14.0
-djangorestframework-simplejwt==5.4.0
-django-phonenumber-field[phonenumbers]
+django-filter==24.3
+django-phonenumber-field==8.0.0
+djangorestframework==3.15.2
+djangorestframework_simplejwt==5.4.0
+Markdown==3.7
+phonenumberslite==8.13.53
+psycopg2-binary>=2.9
+PyJWT==2.10.1
+sqlparse==0.5.3

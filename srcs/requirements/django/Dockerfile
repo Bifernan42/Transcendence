@@ -13,8 +13,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH="/app"
 
-RUN apt-get update
-RUN apt-get install netcat-traditional
+RUN apt-get update && \
+	apt-get install -y netcat-traditional iputils-ping curl wget net-tools iproute2 jq postgresql-client
 # Upgrade pip
 RUN pip install --upgrade pip 
 
