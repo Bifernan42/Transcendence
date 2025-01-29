@@ -11,12 +11,17 @@ from rest_framework import status
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import CustomUserTrans, Friendship
+from .models import CustomUserTrans, Friendship, History
 
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField()
+
+class HistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = History
+        fields = ['home', 'away', 'score', 'score_2', 'status', 'duration', 'date_played']
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -103,4 +108,36 @@ def add_friend(request):
             return Response({"error": f"User does not exist.{username}"}, status=400)
         except ValueError as e:
             return Response({"error": str(e)}, status=400)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@login_required
+def show_history(request):
+    if request.method == "GET":
+        try :
+            user = request.user
+            #supprimer les games de l'utilisateurs datant de plus d'un mois
+            one_month_ago = timezone.now() - timedelta(days=30)
+            History.objects.filter(date_played__lt=one_month_ago).filter(Q(user=user) | Q(user_2=user)).delete()
+            #trier les games pour les renvoyer
+            histories = History.objects.filter(user=user) | History.objects.filter(User_2=user)
+            serializer = HistorySerializer(histories, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
+return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+#Seul le serveur peut configurer une nouvelle partie dans l'historique, faut encore configurer son "rang"
+@permission_classes([IsAdminUser])
+def add_game_history(request):
+    if (request.method == "POST")
+           serializer = HistorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
 
