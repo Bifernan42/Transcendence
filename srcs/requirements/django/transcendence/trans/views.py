@@ -14,6 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Q
+from django.core.exceptions import ValidationError
 from .models import CustomUserTrans, Friendship, History
 
 
@@ -25,7 +26,17 @@ class HistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = History
         fields = ['user1', 'user2', 'score1', 'score2', 'winner', 'duration', 'date_played']
+    def validate_winner(self, value):
+        if value < 0 or value > 2:
+            raise serializers.ValidationError("Winner must be between 0 and 2.")
+        return value
 
+    def validate_date_played(self, value):
+        one_month_ago = timezone.now() - timedelta(days=30)
+        if value < one_month_ago:
+            raise serializers.ValidationError("Game has been played more than a month ago.")
+        return value
+        
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def registerView(request):
@@ -136,12 +147,28 @@ def show_history(request):
 @permission_classes([IsAdminUser])
 def add_game_history(request):
     if (request.method == "POST"):
-        user1 = request.data.get('user1')
-        user2 = request.data.get('user2')
-        serializer = HistorySerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try :
+            user1 = request.data.get('user1')
+            user2 = request.data.get('user2')
+            winner = request.data.get("winner")
+            serializer = HistorySerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                user1object = CustomUserTrans.objects.get(id=user1)
+                user2object = CustomUserTrans.objects.get(id=user2)
+                #incrementation du nombre de partie
+                if winner == 1:
+                    user1object.set_stats(user2object.mmr, 1)  # user1 gagne
+                    user2object.set_stats(user1object.mmr, 0)  # user2 perd
+                elif winner == 2:
+                    user1object.set_stats(user2object.mmr, 0)  # user1 perd
+                    user2object.set_stats(user1object.mmr, 1)  # user2 gagne
+                else:
+                    user1object.set_stats(user2object.mmr, 0.5)  # match nul
+                    user2object.set_stats(user1object.mmr, 0.5)  # match nul
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
 
