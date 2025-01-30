@@ -1,19 +1,19 @@
 // ************************************************************************** //
 //                                                                            //
 //                                                        :::      ::::::::   //
-//   main.zig                                           :+:      :+:    :+:   //
+//   Paddle.zig                                         :+:      :+:    :+:   //
 //                                                    +:+ +:+         +:+     //
 //   By: pollivie <pollivie.student.42.fr>          +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
-//   Created: 2025/01/30 10:09:28 by pollivie          #+#    #+#             //
-//   Updated: 2025/01/30 10:09:29 by pollivie         ###   ########.fr       //
+//   Created: 2025/01/30 11:07:49 by pollivie          #+#    #+#             //
+//   Updated: 2025/01/30 11:07:50 by pollivie         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
 
 const std = @import("std");
-const rl = @import("raygui");
+const rl = @import("raylib");
 const rg = @import("raygui");
 
-pub fn main() !void {
-    std.debug.print("Server {d}: \n", .{std.time.timestamp()});
-}
+pub const Paddle = packed struct(u128) {
+    dimension: rl.Rectangle,
+};

@@ -11,6 +11,8 @@
 // ************************************************************************** //
 
 const std = @import("std");
+const rl = @import("raygui");
+const rg = @import("raygui");
 
 pub fn main() !void {
     std.debug.print("Client {d}: \n", .{std.time.timestamp()});
