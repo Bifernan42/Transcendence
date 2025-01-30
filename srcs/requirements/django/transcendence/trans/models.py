@@ -6,6 +6,8 @@ from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
 from django.utils import timezone
 
+
+
 class CustomUserTransManager(BaseUserManager):
     def _create_user(self, username, email, password, **extra_fields):
         if not username:
@@ -41,7 +43,7 @@ class CustomUserTransManager(BaseUserManager):
 
 class CustomUserTrans(AbstractUser):
     email = models.EmailField(unique=True)
-    phone_number = PhoneNumberField(blank=True, null=True)
+    phone_number = PhoneNumberField(blank=False, null=False, unique = True)
     nbrgames = models.IntegerField(default=0, editable=False)
 
 

@@ -14,9 +14,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Q
+from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from .models import CustomUserTrans, Friendship, History
-
+from phonenumber_field.validators import validate_international_phonenumber
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -45,23 +46,39 @@ def registerView(request):
         email = request.data.get('email')
         password = request.data.get('password')
         phone_number = request.data.get('phone_number')
+
         if not username or not password or not email or not phone_number:
             return Response({"detail": "Username, email, phone number, and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try :
+            validate_email(email)
+        except ValidationError:
+            return Response({"detail": "Email Error"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try :
+            validate_international_phonenumber(phone_number)
+        except ValidationError:
+                return Response({"detail": "Invalid phone number"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(username) < 4 or len(username) > 15 :
+            return Response({"detail": "Username must be between 4 and 20 characters"}, status=status.HTTP_400_BAD_REQUEST)
+
         if CustomUserTrans.objects.filter(username=username).exists():
             return Response({"detail": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
+        
         if CustomUserTrans.objects.filter(email=email).exists():
             return Response({"detail": "Email already in use."}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            user = CustomUserTrans.objects.create_user(username=username, password=password, email=email, phone_number=phone_number)
-            user.save()
-            login(request, user)
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                "detail": "Successfully registered.",
-                "refresh": str(refresh),
-                "access": str(refresh.access_token)
-            }, status=status.HTTP_200_OK)
-            return Response({"detail": "Successfully registered."}, status=status.HTTP_200_OK)
+        
+        user = CustomUserTrans.objects.create_user(username=username, password=password, email=email, phone_number=phone_number)
+        user.save()
+        login(request, user)
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "detail": "Successfully registered.",
+            "refresh": str(refresh),
+            "access": str(refresh.access_token)
+        }, status=status.HTTP_200_OK)
+        return Response({"detail": "Successfully registered."}, status=status.HTTP_200_OK)
     return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
 
 # Vue de connexion
