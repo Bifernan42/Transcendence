@@ -168,3 +168,11 @@ SIMPLE_JWT = {
 }
 
 AUTH_USER_MODEL = 'trans.CustomUserTrans'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'adm.transc25@gmail.com'
+EMAIL_HOST_PASSWORD = 'fxzj ujzk bdgn xcqw'
+DEFAULT_FROM_EMAIL = 'adm.transc25@gmail.com'
+
