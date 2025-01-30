@@ -138,9 +138,6 @@ def add_game_history(request):
     if (request.method == "POST"):
         user1 = request.data.get('user1')
         user2 = request.data.get('user2')
-        winner = request.data.get('winner')
-        if winner < 0 or winner > 2 :
-            return Response({"detail": "Invalid winner status"}, status=status.HTTP_400_BAD_REQUEST)
         serializer = HistorySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
