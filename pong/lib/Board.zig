@@ -9,12 +9,14 @@
 //   Updated: 2025/01/30 13:40:03 by pollivie         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
+
 const std = @import("std");
 const rl = @import("raylib");
 const rg = @import("raygui");
+const root = @import("root.zig");
 pub const Board = @This();
 
-dimension: rl.Rectangle,
+dimension: rl.Rectangle = root.rect_default,
 
 pub fn init(dimension: rl.Rectangle) Board {
     return .{
@@ -67,3 +69,7 @@ pub fn update(self: *Board, width: u32, height: u32) void {
     self.dimension.width = @floatFromInt(width);
     self.dimension.height = @floatFromInt(height);
 }
+
+pub const default: Board = .{
+    .dimension = root.rect_default,
+};

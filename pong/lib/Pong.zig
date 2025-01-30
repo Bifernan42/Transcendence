@@ -95,3 +95,10 @@ pub fn update(self: *Pong, response: *const Response) void {
         .y = response.ball_position_y,
     }, response.ball_radius);
 }
+
+pub const default: Pong = .{
+    .player1 = Player.default,
+    .player2 = Player.default,
+    .board = Board.default,
+    .ball = Ball.default,
+};

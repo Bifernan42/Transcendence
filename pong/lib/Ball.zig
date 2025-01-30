@@ -13,11 +13,10 @@
 const std = @import("std");
 const rl = @import("raylib");
 const root = @import("root.zig");
-
 pub const Ball = @This();
 
-position: rl.Vector2,
-radius: f32,
+position: rl.Vector2 = root.vec2_default,
+radius: f32 = 0.0,
 
 pub fn init(position: rl.Vector2, radius: f32) Ball {
     return .{
@@ -52,3 +51,8 @@ pub fn update(self: *Ball, position: rl.Vector2, radius: f32) void {
     self.position.y = position.y;
     self.radius = radius;
 }
+
+pub const default: Ball = .{
+    .position = .{ .x = 0, .y = 0 },
+    .radius = 0.0,
+};

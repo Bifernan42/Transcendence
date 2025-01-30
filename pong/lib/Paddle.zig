@@ -16,7 +16,7 @@ const root = @import("root.zig");
 const Response = @import("root.zig").Response;
 pub const Paddle = @This();
 
-dimension: rl.Rectangle,
+dimension: rl.Rectangle = root.rect_default,
 
 pub fn init(dimension: rl.Rectangle) Paddle {
     return .{
@@ -36,3 +36,7 @@ pub fn update(self: *Paddle, position: rl.Vector2) void {
     self.dimension.x = position.x;
     self.dimension.y = position.y;
 }
+
+pub const default: Paddle = .{
+    .dimension = root.rect_default,
+};

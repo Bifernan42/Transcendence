@@ -30,6 +30,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .link_libc = true,
     });
+    server_module.addImport("raylib", raylib);
+    server_module.addImport("raygui", raygui);
     server_module.addImport("libpong", libpong_module);
 
     const client_module = b.createModule(.{
@@ -38,6 +40,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .link_libc = true,
     });
+    client_module.addImport("raylib", raylib);
+    client_module.addImport("raygui", raygui);
     client_module.addImport("libpong", libpong_module);
 
     // Artifacts - Lib, Server, Client
