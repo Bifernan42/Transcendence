@@ -11,10 +11,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import ValidationError
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import CustomUserTrans, Friendship
 
-
+### USER SYSTEMS ###
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField()
@@ -76,13 +78,16 @@ class LogoutView(APIView):
         return Response({"detail" : "Successfully logged out."}, status=status.HTTP_200_OK)
 
 
-### FRIEND FUNCTIONS ###
+
+### FRIEND SYSTEMS ###
 @api_view(['POST'])
 @login_required
 def add_friend(request):
     try:
         user = request.user
         friend = CustomUserTrans.objects.get(username=request.data.get('friend_user'))
+        if user.username == friend.username:
+            Response({"detail":f"You cannot send yourself a friend request"}, status=400)
 
         #check si deja amis
         if Friendship.objects.filter(
@@ -106,16 +111,18 @@ def add_friend(request):
             return Response({"detail": f"Friend request successfully send to {friend.username}."}, status=200)
 
     except CustomUserTrans.DoesNotExist:
-        return Response({"error": f"User {friend.username} does not exist."}, status=400)
+        return Response({"error": f"User {request.data.get('friend_user')} does not exist."}, status=400)
     except Exception as e:
         return Response({"error": str(e)}, status=400)
 
 @api_view(['DELETE'])
 @login_required
-def unfriend(friend_id):
+def unfriend(request):
     try:
         user = request.user
         friend = CustomUserTrans.objects.get(username=request.data.get('friend_user'))
+        if user.username == friend.username:
+            Response({"detail":f"You cannot unfriend yourself"}, status=400)
 
         friendship_1 = Friendship.objects.filter(user=user, friend=friend).first()
         friendship_2 = Friendship.objects.filter(user=friend, friend=user).first()
@@ -157,7 +164,7 @@ def view_received_requests(request):
 def accept_friend_request(request):
     try:
         user = request.user
-        friend = request.data.get('friend_user')
+        friend = CustomUserTrans.objects.get(username=request.data.get('friend_user'))
         friendship = Friendship.objects.get(user=friend, friend=user, accepted=False)
 
         friendship.accepted = True
@@ -175,7 +182,7 @@ def accept_friend_request(request):
 def reject_friend_request(request):
     try:
         user = request.user
-        friend = request.data.get('friend_user')
+        friend = CustomUserTrans.objects.get(username=request.data.get('friend_user'))
         friendship = Friendship.objects.get(user=friend, friend=user, accepted=False)
 
         friendship.delete()
@@ -200,18 +207,20 @@ def friendship_status(request):
     try:
         user = request.user
         friend = CustomUserTrans.objects.get(username=request.data.get('friend_user'))
+        if user.username == friend.username:
+            Response({"detail":f"That's you!"}, status=400)
 
         friendship_1 = Friendship.objects.filter(user=user, friend=friend).first()
         friendship_2 = Friendship.objects.filter(user=friend, friend=user).first()
         if friendship_1:
             if friendship_1.accepted:
-                return response({"status": "friends"}, status=200)
+                return response({friend.username: "friends"}, status=200)
             else:
-                return Response({"status": "request_sent"}, status=200)
+                return Response({friend.username: "request_sent"}, status=200)
         elif friendship_2 and not friendship_2.accepted:
-                return Response({"status": "request_received"}, status=200)
+                return Response({friend.username: "request_received"}, status=200)
 
-        return Response({"status": "no_relationship"}, status=200)
+        return Response({friend.username: "no_relationship"}, status=200)
     except CustomUserTrans.DoesNotExist:
         return Response({"error": "User not found."}, status=400)
     except Exception as e:
@@ -229,7 +238,7 @@ def view_notifications(request):
         friend_requests = [
             {
                 "type":"friend_request",
-                "message":"{req.user.username} has sent you a friend request",
+                "message":f"{req.user.username} has sent you a friend request",
                 "sender":req.user.username
             }
             for req in pending
