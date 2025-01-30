@@ -5,48 +5,37 @@
 //                                                    +:+ +:+         +:+     //
 //   By: pollivie <pollivie.student.42.fr>          +#+  +:+       +#+        //
 //                                                +#+#+#+#+#+   +#+           //
-//   Created: 2025/01/30 11:07:25 by pollivie          #+#    #+#             //
-//   Updated: 2025/01/30 11:07:25 by pollivie         ###   ########.fr       //
+//   Created: 2025/01/30 13:39:41 by pollivie          #+#    #+#             //
+//   Updated: 2025/01/30 13:39:50 by pollivie         ###   ########.fr       //
 //                                                                            //
 // ************************************************************************** //
-
 const std = @import("std");
+
 const rl = @import("raylib");
-const rg = @import("raygui");
 
-pub const Role = enum(u8) {
-    is_undefined,
-    is_player1,
-    is_player2,
-    is_ai_bot,
-    is_spectator,
-};
+const Action = @import("root.zig").Action;
+const Paddle = @import("Paddle.zig");
+const Role = @import("root.zig").Role;
 
-pub const Action = enum(u8) {
-    press_none,
-    press_up,
-    press_down,
-    press_pause,
-    press_play,
-};
+const Player = @This();
 
-pub const Status = enum(u8) {
-    accepted,
-    registered,
-    disconnected,
-    playing,
-    failure,
-    success,
-};
+client_id: u32,
+score: u8,
+role: Role,
+action: Action,
+paddle: Paddle,
 
-pub const Move = packed struct(u72) {
-    action: Action,
-    timestamp: u64,
-};
+pub fn init(role: Role, paddle: Paddle) Player {
+    return .{
+        .role = role,
+        .paddle = paddle,
+        .client_id = @intFromEnum(role),
+    };
+}
 
-pub const Player = packed struct(u128) {
-    state: Status,
-    role: Role,
-    move: Move,
-    _padding: u40,
-};
+pub fn update(self: *Player, player: Player) void {
+    self.client_id = @intFromEnum(player.role);
+    self.score = player.score;
+    self.role = player.role;
+    self.paddle = player.paddle;
+}

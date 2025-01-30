@@ -11,9 +11,7 @@
 // ************************************************************************** //
 
 const std = @import("std");
-const rl = @import("raygui");
+const rl = @import("raylib");
 const rg = @import("raygui");
 
-pub fn main() !void {
-    std.debug.print("Server {d}: \n", .{std.time.timestamp()});
-}
+pub fn main() !void {}

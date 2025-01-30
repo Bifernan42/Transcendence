@@ -15,13 +15,67 @@ const std = @import("std");
 pub const rg = @import("raygui");
 pub const rl = @import("raygui");
 
-pub const Ball = @import("pong/Ball.zig").Ball;
-pub const Board = @import("pong/Board.zig").Board;
-pub const Game = @import("pong/Game.zig").Game;
-pub const GameKind = @import("pong/Game.zig").Kind;
-pub const GameRules = @import("pong/Game.zig").Rules;
-pub const Player = @import("pong/Player.zig").Player;
-pub const PlayerRole = @import("pong/Player.zig").Role;
-pub const PlayerAction = @import("pong/Player.zig").Action;
-pub const PlayerStatus = @import("pong/Player.zig").Status;
-pub const PlayerMove = @import("pong/Player.zig").Move;
+pub const Ball = @import("Ball.zig");
+pub const Board = @import("Board.zig");
+pub const Paddle = @import("Paddle.zig");
+pub const Player = @import("Player.zig");
+pub const Pong = @import("Pong.zig");
+
+pub const Role = enum(u8) {
+    nobody,
+    player1,
+    player2,
+    spectator,
+};
+
+pub const Action = enum(u8) {
+    on_key_press_nothing,
+    on_key_press_p1_up,
+    on_key_press_p1_down,
+    on_key_press_p2_up,
+    on_key_press_p2_down,
+};
+
+pub const Status = enum(u8) {
+    lobby,
+    playing,
+    done,
+    pausing,
+    resuming,
+    failure,
+};
+
+// Ce que le serveur renvoie tout le temps
+pub const Response = packed struct(u512) {
+    screen_width: u32,
+    screen_height: u32,
+
+    ball_position_x: f32,
+    ball_position_y: f32,
+    ball_radius: f32,
+
+    paddle_width: u32,
+    paddle_height: u32,
+
+    player1_paddle_x: f32,
+    player1_paddle_y: f32,
+
+    player2_paddle_x: f32,
+    player2_paddle_y: f32,
+
+    player1_score: u8,
+    player2_score: u8,
+
+    status: Status,
+    timestamp: i64,
+    _padding: u72,
+};
+
+// Ce que le client envoie tout le temps.
+pub const Request = packed struct(u128) {
+    client_id: u32,
+    p1_action: Action,
+    p2_action: Action,
+    timestamp: i64,
+    _padding: u16,
+};
