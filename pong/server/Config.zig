@@ -43,17 +43,59 @@ pub fn deinit(self: *Config) void {
 }
 
 pub fn parse(self: *Config) !void {
-    if (self.envp.get("SSP_PONG_AI_DIFFICULTY")) |value| {
-        inline for (.{ "recruit", "normal", "commando", "veteran" }, std.meta.tags(AiDifficulty)) |name, tag| {
-            if (compare(name, value)) {
-                self.pong_config.ai_difficulty = tag;
-            }
-        }
-
-        // if (compare(value, "recruit")) {
-        //     self.pong_config.ai_difficulty = .recruit;
-        // }else if (compare(value, "recruit"))
+    if (self.envp.get("SSP_PONG_BALL_RADIUS")) |value| {
+        self.pong_config.ball_radius = parseOfFallback(u32, "SSP_PONG_BALL_RADIUS", value, PongOptions.default.ball_radius);
+    } else {
+        logFallback("SSP_PONG_BALL_RADIUS", u32, PongOptions.default.ball_radius);
     }
+
+    if (self.envp.get("SSP_PONG_BALL_SPEED")) |value| {
+        self.pong_config.ball_speed = parseOfFallback(u32, "SSP_PONG_BALL_SPEED", value, PongOptions.default.ball_speed);
+    } else {
+        logFallback("SSP_PONG_BALL_SPEED", u32, PongOptions.default.ball_speed);
+    }
+
+    if (self.envp.get("SSP_PONG_BOARD_WIDTH")) |value| {
+        self.pong_config.board_width = parseOfFallback(u32, "SSP_PONG_BOARD_WIDTH", value, PongOptions.default.board_width);
+    } else {
+        logFallback("SSP_PONG_BOARD_WIDTH", u32, PongOptions.default.board_width);
+    }
+
+    if (self.envp.get("SSP_PONG_BOARD_HEIGHT")) |value| {
+        self.pong_config.board_height = parseOfFallback(u32, "SSP_PONG_BOARD_HEIGHT", value, PongOptions.default.board_height);
+    } else {
+        logFallback("SSP_PONG_BOARD_HEIGHT", u32, PongOptions.default.board_height);
+    }
+
+    if (self.envp.get("SSP_PONG_PADDLE_WIDTH")) |value| {
+        self.pong_config.paddle_width = parseOfFallback(u32, "SSP_PONG_PADDLE_WIDTH", value, PongOptions.default.paddle_width);
+    } else {
+        logFallback("SSP_PONG_PADDLE_WIDTH", u32, PongOptions.default.paddle_width);
+    }
+
+    if (self.envp.get("SSP_PONG_PADDLE_HEIGHT")) |value| {
+        self.pong_config.paddle_height = parseOfFallback(u32, "SSP_PONG_PADDLE_HEIGHT", value, PongOptions.default.paddle_height);
+    } else {
+        logFallback("SSP_PONG_PADDLE_HEIGHT", u32, PongOptions.default.paddle_height);
+    }
+
+    if (self.envp.get("SSP_PONG_PADDLE_SPEED")) |value| {
+        self.pong_config.paddle_speed = parseOfFallback(u32, "SSP_PONG_PADDLE_SPEED", value, PongOptions.default.paddle_speed);
+    } else {
+        logFallback("SSP_PONG_PADDLE_SPEED", u32, PongOptions.default.paddle_speed);
+    }
+}
+
+fn parseOfFallback(comptime T: type, key: []const u8, buff: []const u8, fallback: T) T {
+    return std.fmt.parseInt(T, buff, 10) catch |err| {
+        std.log.err("error while parsing value associated with '{s}' : {!}", .{ key, err });
+        std.log.info("fallback to : '{}'", .{fallback});
+        return fallback;
+    };
+}
+
+fn logFallback(key: []const u8, comptime T: type, fallback: T) void {
+    log.warn("No value specified for '{s}', defaulting to value : {}", .{ key, fallback });
 }
 
 fn compare(s1: []const u8, s2: []const u8) bool {
@@ -62,13 +104,6 @@ fn compare(s1: []const u8, s2: []const u8) bool {
 
 // const EnvironmentVariables = .{
 //     "SSP_PONG_AI_DIFFICULTY",
-//     "SSP_PONG_BALL_RADIUS",
-//     "SSP_PONG_BALL_SPEED",
-//     "SSP_PONG_BOARD_WIDTH",
-//     "SSP_PONG_BOARD_HEIGHT",
-//     "SSP_PONG_PADDLE_WIDTH",
-//     "SSP_PONG_PADDLE_HEIGHT",
-//     "SSP_PONG_PADDLE_SPEED",
 //     "SSP_SERV_MAXCONN",
 //     "SSP_SERV_P1_NAME",
 //     "SSP_SERV_P2_NAME",

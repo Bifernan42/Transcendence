@@ -49,6 +49,23 @@ pub const PongOptions = struct {
     player1_name: []const u8 = "p1",
     player2_name: []const u8 = "p2",
     pong_kind: PongKind = .local_mp,
+
+    pub const default: PongOptions = .{
+        .ai_difficulty = .normal,
+        .ai_fallback = false,
+        .ball_hitbox_width = 12,
+        .ball_hitbox_height = 12,
+        .ball_radius = 8,
+        .ball_speed = 200,
+        .board_width = 1024,
+        .board_height = 512,
+        .paddle_width = 16,
+        .paddle_height = 64,
+        .paddle_speed = 8,
+        .player1_name = "p1",
+        .player2_name = "p2",
+        .pong_kind = .local_mp,
+    };
 };
 
 player1: Player,
