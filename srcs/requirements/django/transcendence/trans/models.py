@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from phonenumber_field.modelfields import PhoneNumberField
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 class CustomUserTransManager(BaseUserManager):
     def _create_user(self, username, email, password, **extra_fields):
@@ -62,10 +64,13 @@ class History(models.Model):
     user2 = models.ForeignKey(CustomUserTrans, related_name="player2",  on_delete=models.CASCADE)
     score1 = models.IntegerField()
     score2 = models.IntegerField()
-    status = models.CharField(max_length=30)
+    winner = models.IntegerField(default=0)
     duration = models.DurationField()
     date_played = models.DateTimeField()
     
-
+    def clean(self):
+        if self.winner < 0 or self.winner > 2:
+            raise ValidationError(_('Winner must be between 0 and 2.'))
+    
     def __str__(self):
         return f"History of games"

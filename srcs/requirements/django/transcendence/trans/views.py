@@ -24,7 +24,7 @@ class LoginSerializer(serializers.Serializer):
 class HistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = History
-        fields = ['user1', 'user2', 'score1', 'score2', 'status', 'duration', 'date_played']
+        fields = ['user1', 'user2', 'score1', 'score2', 'winner', 'duration', 'date_played']
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -138,12 +138,13 @@ def add_game_history(request):
     if (request.method == "POST"):
         user1 = request.data.get('user1')
         user2 = request.data.get('user2')
-        # if CustomUserTrans.objects.filter(username=user1).exists() and CustomUserTrans.objects.filter(username=user2).exists() :
+        winner = request.data.get('winner')
+        if winner < 0 or winner > 2 :
+            return Response({"detail": "Invalid winner status"}, status=status.HTTP_400_BAD_REQUEST)
         serializer = HistorySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        # return Response({"details":"Invalid users"}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
 
