@@ -6,7 +6,7 @@ all: up
 up: build
 	# @mkdir -p $(WP_DATA)
 	# @mkdir -p $(DB_DATA)
-	export COMPOSE_HTTP_TIMEOUT=120 && sudo docker-compose -f ./srcs/docker-compose.yml up -d
+	export COMPOSE_HTTP_TIMEOUT=120 && docker-compose -f ./srcs/docker-compose.yml up -d
 
 # stop the containers
 down:

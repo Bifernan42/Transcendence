@@ -9,8 +9,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import serializers
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
+from datetime import timedelta
+from django.utils import timezone
+from django.db.models import Q
 from .models import CustomUserTrans, Friendship, History
 
 
@@ -21,7 +24,7 @@ class LoginSerializer(serializers.Serializer):
 class HistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = History
-        fields = ['home', 'away', 'score', 'score_2', 'status', 'duration', 'date_played']
+        fields = ['user1', 'user2', 'score1', 'score2', 'status', 'duration', 'date_played']
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -110,34 +113,37 @@ def add_friend(request):
             return Response({"error": str(e)}, status=400)
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([AllowAny])
 @login_required
 def show_history(request):
     if request.method == "GET":
         try :
-            user = request.user
+            user = request.user.id
             #supprimer les games de l'utilisateurs datant de plus d'un mois
             one_month_ago = timezone.now() - timedelta(days=30)
-            History.objects.filter(date_played__lt=one_month_ago).filter(Q(user=user) | Q(user_2=user)).delete()
+            History.objects.filter(date_played__lt=one_month_ago).filter(Q(user1=user) | Q(user2=user)).delete()
             #trier les games pour les renvoyer
-            histories = History.objects.filter(user=user) | History.objects.filter(User_2=user)
+            histories = History.objects.filter(user1=user) | History.objects.filter(user2=user)
             serializer = HistorySerializer(histories, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
-return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
 #Seul le serveur peut configurer une nouvelle partie dans l'historique, faut encore configurer son "rang"
+@api_view(['POST'])
 @permission_classes([IsAdminUser])
 def add_game_history(request):
-    if (request.method == "POST")
-           serializer = HistorySerializer(data=request.data)
+    if (request.method == "POST"):
+        user1 = request.data.get('user1')
+        user2 = request.data.get('user2')
+        # if CustomUserTrans.objects.filter(username=user1).exists() and CustomUserTrans.objects.filter(username=user2).exists() :
+        serializer = HistorySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # return Response({"details":"Invalid users"}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -58,10 +58,10 @@ class Friendship(models.Model):
 
 
 class History(models.Model):
-    user = models.ForeignKey(CustomUserTrans.id, on_delete=models.CASCADE)
-    user_2 = models.ForeignKey(CustomUserTrans.id, on_delete=models.CASCADE)
-    score = models.IntegerField()
-    score_2 = models.IntegerField()
+    user1 = models.ForeignKey(CustomUserTrans, related_name="player1", on_delete=models.CASCADE)
+    user2 = models.ForeignKey(CustomUserTrans, related_name="player2",  on_delete=models.CASCADE)
+    score1 = models.IntegerField()
+    score2 = models.IntegerField()
     status = models.CharField(max_length=30)
     duration = models.DurationField()
     date_played = models.DateTimeField()
