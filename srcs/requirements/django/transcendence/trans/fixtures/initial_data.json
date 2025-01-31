@@ -5,7 +5,7 @@
     "pk": 1,
     "fields": {
       "username": "admin",
-      "email": "admin@example.com",
+      "email": "moranloic@gmail.com",
       "password": "pbkdf2_sha256$870000$4nZEub7iNAAKbyPLUW70bp$YfGtlKh4mbKkUO+NvTzaQibAILnLgW8trbxvmw22yMM=", 
       "phone_number": "+1234567890",
       "is_superuser": true,

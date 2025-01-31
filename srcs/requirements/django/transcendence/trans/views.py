@@ -3,13 +3,20 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.db import IntegrityError
 from django.db.models import Q
+from django.utils import timezone
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.core.mail import send_mail
+from phonenumber_field.modelfields import PhoneNumberField
+from datetime import timedelta
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework import status
-from rest_framework import serializers
+from rest_framework import status, serializers, permissions
+from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import AllowAny, IsAdminUser
@@ -23,7 +30,75 @@ from .models import CustomUserTrans, Friendship, History
 from phonenumber_field.validators import validate_international_phonenumber
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
-    password = serializers.CharField()
+    password = serializers.CharField(write_only=True) 
+    def validate(self, data):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            raise serializers.ValidationError("You are already logged in.")
+        return data
+
+class PasswordChangeSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+    def validate_old_password(self, value):
+        user = self.context.get('user')
+        if not user.check_password(value):
+            raise serializers.ValidationError("Old password is incorrect.")
+        return value
+    def validate_new_password(self, value):
+        user = self.context.get('user')
+        if user.check_password(value):
+            raise serializers.ValidationError("New password cannot be the same as old password.")
+        try:
+            validate_password(value, user)
+        except Exception as e:
+            raise serializers.ValidationError(str(e))
+        return value
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    def validate_email(self, value):
+        if not CustomUserTrans.objects.filter(email=value).exists():
+            raise serializers.ValidationError("No user associated with this email.")
+        return value
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True)
+    def validate_new_password(self, value):
+        user = self.context.get('user')
+        if user.check_password(value):
+            raise serializers.ValidationError("New password cannot be the same as old password.")
+        try:
+            validate_password(value, user)
+        except Exception as e:
+            raise serializers.ValidationError(str(e))
+        return value
+
+class EmailUpdateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    def validate_email(self, value):
+        if value == self.instance.email:
+            raise serializers.ValidationError("This is your current email.")
+        if CustomUserTrans.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already in use.")
+        return value
+
+class UsernameUpdateSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    def validate_username(self, value):
+        if value == self.instance.username:
+            raise serializers.ValidationError("This is your current username.")
+        if CustomUserTrans.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username already in use.")
+        return value
+
+
+#class PhoneNumberUpdateSerializer(serializers.Serializer):
+#   phone_number = PhoneNumberField(blank=True, null=True)
+#   def validate_phone_number(self, value):
+ #       if value == self.instance.phone_number:
+  #          raise serializers.ValidationError("This is your current phone number.")
+   #     return value
 
 class HistorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -70,7 +145,6 @@ def registerView(request):
         
         if CustomUserTrans.objects.filter(email=email).exists():
             return Response({"detail": "Email already in use."}, status=status.HTTP_400_BAD_REQUEST)
-        
         user = CustomUserTrans.objects.create_user(username=username, password=password, email=email, phone_number=phone_number)
         user.save()
         login(request, user)
@@ -108,11 +182,111 @@ class LoginView(APIView):
 
 class LogoutView(APIView):  
 
-    def get(self, request, **kwargs):
+    def post(self, request, **kwargs):
         logout(request)
         return Response({"detail" : "Successfully logged out."}, status=status.HTTP_200_OK)
 
+class PasswordChangeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def put(self, request):
+        user = request.user
+        serializer = PasswordChangeSerializer(data=request.data, context={'user':user})
 
+        if serializer.is_valid():
+            old_password = serializer.validated_data['old_password']
+            new_password = serializer.validated_data['new_password']
+            user.set_password(new_password)
+            user.save()
+            return Response({"detail":"Password changed successfully."}, status=200)
+        return Response(serializer.errors, status=400)
+
+class CustomPasswordResetTokenGenerator(PasswordResetTokenGenerator):
+    def valid_until(self, timestamp):
+        return timestamp + timedelta(minutes=20) #token expires after 20mn
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            try:
+                user = CustomUserTrans.objects.get(email=email)
+                uid = urlsafe_base64_encode(str(user.pk).encode('utf-8'))
+                token = CustomPasswordResetTokenGenerator().make_token(user)
+                reset_link = f"http://127.0.0.1:8000/api/password_reset/{uid}/{token}/"
+                send_mail(
+                        "Transcendence Password Reset Link",
+                        f"Click the following link to reset your password: {reset_link}\n \
+                                The password will expire in 20 minutes.",
+                        "no-reply@transc.com",
+                        [email],
+                        fail_silently=False,
+                )
+                return Response({"detail":"Password reset link has been sent, check your inbox."}, status=200)
+            except CustomUserTrans.DoesNotExist:
+                return Response({"error":"No user found with this email address."}, status=400)
+        return Response(serializer.errors, status=400)
+    
+class PasswordResetConfirmView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def put(self, request, uidb64, token):
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode('utf-8')
+            user_pk = int(uid)
+            user = CustomUserTrans.objects.get(pk=user_pk)
+            if CustomPasswordResetTokenGenerator().check_token(user, token):
+                serializer = PasswordResetConfirmSerializer(data=request.data, context={"user":user})
+                if serializer.is_valid():
+                    new_password = serializer.validated_data['new_password']
+                    user.set_password(new_password)
+                    user.save()
+                    return Response({"detail":"Password changed successfully"}, status=200)
+                else:
+                    return Response(serializer.errors, status=400)
+            else:
+                return Response({"error":"Invalid token."}, status=400)
+        except CustomUserTrans.DoesNotExist:
+            return Response({"error":"User not found."}, status=400)
+
+class EmailUpdateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def put(self, request):
+        user = request.user
+        serializer = EmailUpdateSerializer(user, data=request.data)
+        if serializer.is_valid():
+            user.email = serializer.validated_data['email']
+            user.save()
+            return Response({"detail":"Email updated successfully."}, status=200)
+        return Response(serializer.errors, status=400)
+
+class UsernameUpdateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        serializer = UsernameUpdateSerializer(data=request.data, instance=user)
+        if serializer.is_valid():
+            user.username = serializer.validated_data['username']
+            user.save()
+            return Response({"detail": "Username updated successfully."}, status=200)
+        return Response(serializer.errors, status=400)
+
+
+#class PhoneNumberUpdateView(APIView):
+ #   permission_classes = [permissions.IsAuthenticated]
+  #  def put(self, request):
+   #     user = request.user
+    #    serializer = PhoneNumberUpdateSerializer(data=request.data, instance=user)
+     #   if serializer.is_valid():
+      #      user.phone_number = serializer.validated_data['phone_number']
+       #     user.save()
+       #     return Response({"detail": "Phone number updated successfully."}, status=200)
+       # return Response(serializer.errors, status=400)    
 
 ### FRIEND SYSTEMS ###
 @api_view(['POST'])
@@ -212,7 +386,7 @@ def accept_friend_request(request):
     except Exception as e:
         return Response({"error": str(e)}, status=400)
 
-@api_view(['POST'])
+@api_view(['DELETE'])
 @login_required
 def reject_friend_request(request):
     try:
