@@ -17,9 +17,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Q
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 from .models import CustomUserTrans, Friendship, History
-
-### USER SYSTEMS ###
+from phonenumber_field.validators import validate_international_phonenumber
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField()
@@ -28,7 +29,17 @@ class HistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = History
         fields = ['user1', 'user2', 'score1', 'score2', 'winner', 'duration', 'date_played']
+    def validate_winner(self, value):
+        if value < 0 or value > 2:
+            raise serializers.ValidationError("Winner must be between 0 and 2.")
+        return value
 
+    def validate_date_played(self, value):
+        one_month_ago = timezone.now() - timedelta(days=30)
+        if value < one_month_ago:
+            raise serializers.ValidationError("Game has been played more than a month ago.")
+        return value
+        
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def registerView(request):
@@ -37,23 +48,39 @@ def registerView(request):
         email = request.data.get('email')
         password = request.data.get('password')
         phone_number = request.data.get('phone_number')
+
         if not username or not password or not email or not phone_number:
             return Response({"detail": "Username, email, phone number, and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try :
+            validate_email(email)
+        except ValidationError:
+            return Response({"detail": "Email Error"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try :
+            validate_international_phonenumber(phone_number)
+        except ValidationError:
+                return Response({"detail": "Invalid phone number"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(username) < 4 or len(username) > 15 :
+            return Response({"detail": "Username must be between 4 and 20 characters"}, status=status.HTTP_400_BAD_REQUEST)
+
         if CustomUserTrans.objects.filter(username=username).exists():
             return Response({"detail": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
+        
         if CustomUserTrans.objects.filter(email=email).exists():
             return Response({"detail": "Email already in use."}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            user = CustomUserTrans.objects.create_user(username=username, password=password, email=email, phone_number=phone_number)
-            user.save()
-            login(request, user)
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                "detail": "Successfully registered.",
-                "refresh": str(refresh),
-                "access": str(refresh.access_token)
-            }, status=status.HTTP_200_OK)
-            return Response({"detail": "Successfully registered."}, status=status.HTTP_200_OK)
+        
+        user = CustomUserTrans.objects.create_user(username=username, password=password, email=email, phone_number=phone_number)
+        user.save()
+        login(request, user)
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "detail": "Successfully registered.",
+            "refresh": str(refresh),
+            "access": str(refresh.access_token)
+        }, status=status.HTTP_200_OK)
+        return Response({"detail": "Successfully registered."}, status=status.HTTP_200_OK)
     return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
 
 # Vue de connexion
@@ -285,12 +312,28 @@ def show_history(request):
 @permission_classes([IsAdminUser])
 def add_game_history(request):
     if (request.method == "POST"):
-        user1 = request.data.get('user1')
-        user2 = request.data.get('user2')
-        serializer = HistorySerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try :
+            user1 = request.data.get('user1')
+            user2 = request.data.get('user2')
+            winner = request.data.get("winner")
+            serializer = HistorySerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                user1object = CustomUserTrans.objects.get(id=user1)
+                user2object = CustomUserTrans.objects.get(id=user2)
+                #incrementation du nombre de partie
+                if winner == 1:
+                    user1object.set_stats(user2object.mmr, 1)  # user1 gagne
+                    user2object.set_stats(user1object.mmr, 0)  # user2 perd
+                elif winner == 2:
+                    user1object.set_stats(user2object.mmr, 0)  # user1 perd
+                    user2object.set_stats(user1object.mmr, 1)  # user2 gagne
+                else:
+                    user1object.set_stats(user2object.mmr, 0.5)  # match nul
+                    user2object.set_stats(user1object.mmr, 0.5)  # match nul
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
 
