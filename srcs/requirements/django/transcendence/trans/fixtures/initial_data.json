@@ -1,0 +1,54 @@
+
+[
+  {
+    "model": "trans.CustomUserTrans", 
+    "pk": 1,
+    "fields": {
+      "username": "admin",
+      "email": "moranloic@gmail.com",
+      "password": "pbkdf2_sha256$870000$4nZEub7iNAAKbyPLUW70bp$YfGtlKh4mbKkUO+NvTzaQibAILnLgW8trbxvmw22yMM=", 
+      "phone_number": "+1234567890",
+      "is_superuser": true,
+      "is_staff": true,
+      "is_active": true
+    }
+  }
+  ,
+  {
+    "model": "trans.CustomUserTrans", 
+    "pk": 2,
+    "fields": {
+      "username": "testUser",
+      "email": "test@example.com",
+	  "password":"pbkdf2_sha256$870000$A2fK9l9DlKprnR5JAfEBe1$SmyQHL1PYgy6jUvpFIPP56VijnYnHnqPpxAfObNmOPs=",
+      "phone_number": "+1234567890",
+      "is_superuser": false,
+      "is_staff": false,
+      "is_active": true
+    }
+  }
+  ,
+  {
+	  "model": "trans.Friendship",
+	  "pk": 1,
+	  "fields": {
+		  "user": 1,
+		  "friend": 2,
+		  "created_at":"2025-01-30T14:22:00Z",
+		  "accepted": true
+	  }
+  }
+  ,
+  {
+	  "model": "trans.Friendship",
+	  "pk": 2,
+	  "fields": {
+		  "user": 2,
+		  "friend": 1,
+		  "created_at":"2025-01-30T14:22:00Z",
+		  "accepted": true
+	  }
+  }
+
+]
+
