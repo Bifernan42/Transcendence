@@ -60,6 +60,9 @@ def registerView(request):
         except ValidationError:
                 return Response({"detail": "Invalid phone number"}, status=status.HTTP_400_BAD_REQUEST)
         
+        if not re.match("^[a-zA-Z0-9_]*$", username):
+            return Response({"detail": "Username must not contain special characters."}, status=status.HTTP_400_BAD_REQUEST)
+        
         if len(username) < 4 or len(username) > 15 :
             return Response({"detail": "Username must be between 4 and 20 characters"}, status=status.HTTP_400_BAD_REQUEST)
 
