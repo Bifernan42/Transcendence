@@ -6,5 +6,4 @@ venv/
 *.vscode
 *.sqlite3
 .zig-cache/
-zig-out/
 
