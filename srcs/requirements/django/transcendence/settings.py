@@ -12,10 +12,33 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import os
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Chemin absolu vers le répertoire où les fichiers téléchargés seront stockés
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# URL qui gère les fichiers médias
+MEDIA_URL = '/media/'
+
+
+# Configuration des fichiers statiques
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
+# URL qui gère les fichiers médias
+
+
+# # Configuration des fichiers statiques
+# STATIC_URL = '/static/'
+# STATICFILES_DIRS = [
+#     os.path.join(BASE_DIR, 'static'),
+# ]
+
+MEDIA_URL = '/users/images/'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -175,4 +198,3 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'adm.transc25@gmail.com'
 EMAIL_HOST_PASSWORD = 'fxzj ujzk bdgn xcqw'
 DEFAULT_FROM_EMAIL = 'adm.transc25@gmail.com'
-
