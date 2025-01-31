@@ -1,0 +1,31 @@
+
+[
+  {
+    "model": "trans.CustomUserTrans", 
+    "pk": 1,
+    "fields": {
+      "username": "admin",
+      "email": "admin@example.com",
+      "password": "pbkdf2_sha256$870000$4nZEub7iNAAKbyPLUW70bp$YfGtlKh4mbKkUO+NvTzaQibAILnLgW8trbxvmw22yMM=", 
+      "phone_number": "+1234567890",
+      "is_superuser": true,
+      "is_staff": true,
+      "is_active": true
+    }
+  }
+  ,
+  {
+    "model": "trans.CustomUserTrans", 
+    "pk": 2,
+    "fields": {
+      "username": "testUser",
+      "email": "test@example.com",
+	  "password": "pbkdf2_sha256$870000$HMlZHLi8ubo5bjI63PbeNK$xOlopfkaLQre99c5ATU/hdmzkMamQXFcP9y8FNdt2vc=",
+      "phone_number": "+1234567890",
+      "is_superuser": false,
+      "is_staff": false,
+      "is_active": true
+    }
+  }
+]
+
