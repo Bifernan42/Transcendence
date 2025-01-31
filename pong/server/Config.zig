@@ -84,36 +84,61 @@ pub fn parse(self: *Config) !void {
     } else {
         logFallback("SSP_PONG_PADDLE_SPEED", u32, PongOptions.default.paddle_speed);
     }
+
+    if (self.envp.get("SSP_SERV_MAXCONN")) |value| {
+        self.serv_config.maxconn = parseOfFallback(u8, "SSP_SERV_MAXCONN", value, ServerOptions.default.maxconn);
+    } else {
+        logFallback("SSP_SERV_MAXCONN", u8, ServerOptions.default.maxconn);
+    }
+
+    if (self.envp.get("SSP_SERV_P1TOK")) |value| {
+        self.serv_config.client1_id = parseOfFallback(u8, "SSP_SERV_P1TOK", value, ServerOptions.default.client1_id);
+    } else {
+        logFallback("SSP_SERV_P1TOK", u8, ServerOptions.default.client1_id);
+    }
+
+    if (self.envp.get("SSP_SERV_P2TOK")) |value| {
+        self.serv_config.client2_id = parseOfFallback(u8, "SSP_SERV_P2TOK", value, ServerOptions.default.client2_id);
+    } else {
+        logFallback("SSP_SERV_P2TOK", u8, ServerOptions.default.client2_id);
+    }
+
+    if (self.envp.get("SSP_SERV_TICKRATE")) |value| {
+        self.serv_config.tickrate = parseOfFallback(u16, "SSP_SERV_TICKRATE", value, ServerOptions.default.tickrate);
+    } else {
+        logFallback("SSP_SERV_TICKRATE", u16, ServerOptions.default.tickrate);
+    }
+
+    if (self.envp.get("SSP_SERV_BIND_IP")) |value| {
+        self.serv_config.ip = value;
+    } else {
+        self.serv_config.ip = ServerOptions.default.ip;
+        logFallback("SSP_SERV_BIND_IP", []const u8, ServerOptions.default.ip);
+    }
+
+    if (self.envp.get("SSP_SERV_ON_PORT")) |value| {
+        self.serv_config.port = parseOfFallback(u16, "SSP_SERV_ON_PORT", value, ServerOptions.default.port);
+    } else {
+        logFallback("SSP_SERV_ON_PORT", u16, ServerOptions.default.port);
+    }
+
+    if (self.envp.get("SSP_SERV_HEADLESS")) |value| {
+        self.serv_config.headless = if (compare(value, "true")) true else false;
+    }
 }
 
 fn parseOfFallback(comptime T: type, key: []const u8, buff: []const u8, fallback: T) T {
     return std.fmt.parseInt(T, buff, 10) catch |err| {
         std.log.err("error while parsing value associated with '{s}' : {!}", .{ key, err });
-        std.log.info("fallback to : '{}'", .{fallback});
+        std.log.info("fallback to : '{any}'", .{fallback});
         return fallback;
     };
 }
 
 fn logFallback(key: []const u8, comptime T: type, fallback: T) void {
-    log.warn("No value specified for '{s}', defaulting to value : {}", .{ key, fallback });
+    log.warn("No value specified for '{s}', defaulting to value : {any}", .{ key, fallback });
 }
 
 fn compare(s1: []const u8, s2: []const u8) bool {
     return std.mem.eql(u8, s1, s2);
 }
-
-// const EnvironmentVariables = .{
-//     "SSP_PONG_AI_DIFFICULTY",
-//     "SSP_SERV_MAXCONN",
-//     "SSP_SERV_P1_NAME",
-//     "SSP_SERV_P2_NAME",
-//     "SSP_SERV_TCKRATE",
-//     "SSP_SERV_LOG_LVL",
-//     "SSP_SERV_MAXBUFF",
-//     "SSP_SERV_BIND_IP",
-//     "SSP_SERV_ON_PORT",
-//     "SSP_SERV_TIMEOUT",
-//     "SSP_SERV_MAXRTRY",
-//     "SSP_SERV_IPPROTO",
-//     "SSP_SERV_NONBLCK",
-// };

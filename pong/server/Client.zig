@@ -26,7 +26,7 @@ address: net.Address = undefined,
 socket: posix.socket_t = 0,
 player: Player = Player.default,
 
-pub fn init(address: net.Address, socket: posix.socket_t, player: Player) !Client {
+pub fn init(address: net.Address, socket: posix.socket_t, player: Player) Client {
     return .{
         .address = address,
         .socket = socket,
@@ -66,7 +66,7 @@ pub fn format(
 ) !void {
     _ = fmt;
     _ = options;
-    try writer.print("{s}:{}:{d}", .{ self.address, self.socket, self.player.name });
+    try writer.print("{s}:{}:{d}", .{ self.player.name, self.address, self.socket });
 }
 
 pub const default: Client = .{

@@ -29,12 +29,26 @@ pub const ServerOptions = struct {
     maxconn: u8 = 4,
     timeout: u16 = std.time.ms_per_s * 60,
     log_lvl: log.Level = .info,
+    client1_id: u32 = 1,
+    client2_id: u32 = 2,
+    headless: bool = true,
+
+    pub const default: ServerOptions = .{
+        .ip = "127.0.0.1",
+        .port = 8080,
+        .tickrate = 60,
+        .maxconn = 4,
+        .timeout = std.time.ms_per_s * 60,
+        .log_lvl = .info,
+        .client1_id = 1,
+        .client2_id = 2,
+    };
 };
 
 const Server = @This();
 options: ServerOptions,
 allocator: mem.Allocator,
-addr: net.Address,
+address: net.Address,
 socket: posix.socket_t,
 clients: Buffer(Client),
 pollfds: Buffer(posix.pollfd),
@@ -44,7 +58,7 @@ pub fn init(allocator: mem.Allocator, address: net.Address, options: ServerOptio
         .options = options,
         .allocator = allocator,
         .socket = -1,
-        .addr = address,
+        .address = address,
         .clients = Buffer(Client).empty,
         .pollfds = Buffer(posix.pollfd).empty,
     };
@@ -136,12 +150,12 @@ pub fn accept(self: *Server) !Client {
         .revents = 0,
     };
 
-    self.pollfds.append(self.gpa, client_poll) catch |err| {
+    self.pollfds.append(self.allocator, client_poll) catch |err| {
         log.err("{any} :: failed to append client pollfd: {any}", .{ self, err });
         return err;
     };
 
-    self.clients.append(self.gpa, client) catch |err| {
+    self.clients.append(self.allocator, client) catch |err| {
         log.err("{any} :: failed to append client {any} : {any}", .{ self, client, err });
         return err;
     };

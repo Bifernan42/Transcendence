@@ -18,15 +18,18 @@ const Player = @This();
 
 name: []const u8 = "",
 player: lib.Player = .{},
+score: u8 = 0,
 
 pub fn init(name: []const u8, player: lib.Player) Player {
     return .{
         .name = name,
         .player = player,
+        .score = 0,
     };
 }
 
 pub const default: Player = .{
     .name = "",
     .player = lib.Player.default,
+    .score = 0,
 };

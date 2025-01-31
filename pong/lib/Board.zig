@@ -41,7 +41,7 @@ pub fn drawBoardBackground(self: Board, color: rl.Color) void {
 
 pub fn drawBoardCenterStripLine(self: Board, number_of_strip: u8, fg: rl.Color, bg: rl.Color) void {
     const total_length = self.dimension.height;
-    const strip_length = @divExact(total_length, number_of_strip);
+    const strip_length = @divExact(total_length, @as(f32, @floatFromInt(number_of_strip)));
 
     const start: rl.Vector2 = .{
         .x = @divExact(self.dimension.width, 2),

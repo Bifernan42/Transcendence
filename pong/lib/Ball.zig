@@ -39,7 +39,7 @@ pub fn drawBallLines(self: Ball, color: rl.Color) void {
 }
 
 pub fn drawBallBackground(self: Ball, color: rl.Color) void {
-    rl.drawCircleV(self.position, self.position, color);
+    rl.drawCircleV(self.position, self.radius, color);
 }
 
 pub fn drawHitBox(self: Ball, thickness: f32, color: rl.Color) void {

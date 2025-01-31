@@ -68,13 +68,38 @@ pub const PongOptions = struct {
     };
 };
 
-player1: Player,
-player2: Player,
-board: Board,
-ball: Ball,
-pong: lib.Pong,
+player1: Player = Player.default,
+player2: Player = Player.default,
+board: Board = Board.default,
+ball: Ball = Ball.default,
+pong: lib.Pong = lib.Pong.default,
 
 pub fn init(options: PongOptions) Pong {
-    _ = options;
-    return .{};
+    const paddle1: lib.Paddle = .init(.{
+        .x = 4,
+        .y = 224,
+        .width = @floatFromInt(options.paddle_width),
+        .height = @floatFromInt(options.paddle_height),
+    });
+
+    const paddle2: lib.Paddle = .init(.{
+        .x = 1004,
+        .y = 224,
+        .width = @floatFromInt(options.paddle_width),
+        .height = @floatFromInt(options.paddle_height),
+    });
+
+    const player1_inner: lib.Player = .init(.player1, paddle1);
+    const player2_inner: lib.Player = .init(.player2, paddle2);
+    const board: Board = .init(options.board_width, options.board_height);
+    const ball = Ball.init(board.getCenter(), @floatFromInt(options.ball_radius), @floatFromInt(options.ball_speed));
+    const pong: lib.Pong = .init(player1_inner, player2_inner, board.board, ball.ball);
+
+    return .{
+        .player1 = Player.init(options.player1_name, player1_inner),
+        .player2 = Player.init(options.player2_name, player2_inner),
+        .board = board,
+        .ball = ball,
+        .pong = pong,
+    };
 }
