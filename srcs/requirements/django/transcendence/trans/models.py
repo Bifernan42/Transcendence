@@ -5,8 +5,9 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
 from django.utils import timezone
-
-
+from django.core.files import File
+from django.conf import settings
+import os
 
 class CustomUserTransManager(BaseUserManager):
     def _create_user(self, username, email, password, **extra_fields):
@@ -21,8 +22,12 @@ class CustomUserTransManager(BaseUserManager):
         
         email = self.normalize_email(email)
         user = self.model(username=username, email=email, **extra_fields)
+        with open('/app/media/users/images/default.jpg', 'rb') as f:
+            user.photo.save('default.jpg', File(f), save=False)
+        print("prout")
         user.set_password(password)
         user.save(using=self._db)
+        
         return user
 
     def create_user(self, username, email=None, password=None, **extra_fields):
@@ -43,10 +48,10 @@ class CustomUserTransManager(BaseUserManager):
 
 class CustomUserTrans(AbstractUser):
     email = models.EmailField(unique=True)
-    phone_number = PhoneNumberField(blank=False, null=False, unique = True)
+    phone_number = PhoneNumberField(blank=False, unique = True)
+    photo = models.ImageField(upload_to='users/images/')
+
     nbrgames = models.IntegerField(default=0, editable=False)
-
-
     mmr = models.IntegerField(default=1000, editable=False)
     wins = models.IntegerField(default=0, editable=False)
     loses = models.IntegerField(default=0, editable=False)

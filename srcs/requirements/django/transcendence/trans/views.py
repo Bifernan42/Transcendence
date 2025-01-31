@@ -28,7 +28,11 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from .models import CustomUserTrans, Friendship, History
 from phonenumber_field.validators import validate_international_phonenumber
+from django.core.files.base import ContentFile
+from PIL import Image
 import re
+import os
+
 
 
 class LoginSerializer(serializers.Serializer):
@@ -95,6 +99,15 @@ class UsernameUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Username already in use.")
         return value
 
+class PhotoUpdateSerializer(serializers.Serializer):
+    photo = serializers.ImageField()
+    def validate_pictures(self, value):
+        try :
+            img = Image.open(value)
+            img.verify()  # Vérifie si l'image est valide
+        except (IOError, SyntaxError) as e:
+            raise serializers.ValidationError("Invalid image file.")
+        return value
 
 #class PhoneNumberUpdateSerializer(serializers.Serializer):
 #   phone_number = PhoneNumberField(blank=True, null=True)
@@ -285,6 +298,22 @@ class UsernameUpdateView(APIView):
             user.save()
             return Response({"detail": "Username updated successfully."}, status=200)
         return Response(serializer.errors, status=400)
+    
+class PhotoUpdateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        serializer = PhotoUpdateSerializer(data=request.data, instance=user)
+        if serializer.is_valid():
+            if user.photo and user.photo.name != "default.jpg" and hasattr(user.photo, 'path') and os.path.isfile(user.photo.path):
+                os.remove(user.photo.path)
+            new_photo = serializer.validated_data['photo']
+            new_filename = f"{user.username}_{new_photo.name}"
+            user.photo.save(new_filename, ContentFile(new_photo.read()), save=False)
+            user.save()
+            return Response({"detail": "Photo updated successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 #class PhoneNumberUpdateView(APIView):
@@ -433,7 +462,7 @@ def friendship_status(request):
         friendship_2 = Friendship.objects.filter(user=friend, friend=user).first()
         if friendship_1:
             if friendship_1.accepted:
-                return response({friend.username: "friends"}, status=200)
+                return Response({friend.username: "friends"}, status=200)
             else:
                 return Response({friend.username: "request_sent"}, status=200)
         elif friendship_2 and not friendship_2.accepted:
@@ -470,9 +499,6 @@ def view_notifications(request):
         return Response({"error": str(e)}, status=400)
 
 
-
-
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @login_required
@@ -490,6 +516,7 @@ def show_history(request):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
+
 
 #Seul le serveur peut configurer une nouvelle partie dans l'historique, faut encore configurer son "rang"
 @api_view(['POST'])

@@ -9,3 +9,4 @@ phonenumberslite==8.13.53
 psycopg2-binary>=2.9
 PyJWT==2.10.1
 sqlparse==0.5.3
+pillow==11.1.0

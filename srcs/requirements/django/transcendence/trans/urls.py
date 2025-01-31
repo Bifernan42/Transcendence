@@ -28,6 +28,7 @@ urlpatterns = [
     path('password_reset/<uidb64>/<token>/', views.PasswordResetConfirmView.as_view(), name='confirm_password_change'),
     path('email_update/', views.EmailUpdateView.as_view(), name='update_email'),
     path('username_update/', views.UsernameUpdateView.as_view(), name='username_update'),
+    path('pictures_update/', views.PhotoUpdateView.as_view(), name='photo_update'),
    # path('phone_number_update/', views.PhoneNumberUpdateView.as_view(), name='phone_number_update'),
     path('friend_requests/add_friend/', views.add_friend, name='add_friend'),
     path('unfriend/', views.unfriend, name='unfriend'),
@@ -41,3 +42,4 @@ urlpatterns = [
     path('history/', views.show_history, name='history'),
     path('add_game/', views.add_game_history, name='add_game'),
 ]
+
