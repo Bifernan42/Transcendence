@@ -108,8 +108,7 @@ fn gameLoop(screen_width: i32, screen_height: i32, title: [*:0]const u8, allocat
         // Update game state
         if (rl.isKeyPressedRepeat(.w)) game.player1.move(.up, game.board.dimension);
         if (rl.isKeyPressedRepeat(.s)) game.player1.move(.down, game.board.dimension);
-        if (rl.isKeyDown(rl.KeyboardKey.up)) game.player2.move(.up, game.board.dimension);
-        if (rl.isKeyDown(rl.KeyboardKey.down)) game.player2.move(.down, game.board.dimension);
+        game.player2.moveAi(&game.ball, game.board.dimension);
 
         const maybe_hit_surface = game.ball.move(rl.getFrameTime(), game.board.dimension, game.player1.paddle.dimension, game.player2.paddle.dimension);
 
