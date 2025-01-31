@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from phonenumber_field.modelfields import PhoneNumberField
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 class CustomUserTransManager(BaseUserManager):
     def _create_user(self, username, email, password, **extra_fields):
@@ -57,17 +59,18 @@ class Friendship(models.Model):
         return f"{self.user.username} status with  {self.friend.username} = {self.accepted}"
 
 
-
-
-# class History(models.Model):
-#     user = models.ForeignKey(CustomUserTrans.id)
-#     user_2 = models.ForeignKey(CustomUserTrans.id)
-#     score = models.IntegerField()
-#     score_2 = models.IntegerField()
-#     status = models.CharField(max_length=30)
-#     duration = models.DurationField()
-#     date_played = models.DateTimeField(auto_now_add=True)
+class History(models.Model):
+    user1 = models.ForeignKey(CustomUserTrans, related_name="player1", on_delete=models.CASCADE)
+    user2 = models.ForeignKey(CustomUserTrans, related_name="player2",  on_delete=models.CASCADE)
+    score1 = models.IntegerField()
+    score2 = models.IntegerField()
+    winner = models.IntegerField(default=0)
+    duration = models.DurationField()
+    date_played = models.DateTimeField()
     
-
-#     def __str__(self):
-#         return f"History between {self.user.username} and {self.User_2.username}"
+    def clean(self):
+        if self.winner < 0 or self.winner > 2:
+            raise ValidationError(_('Winner must be between 0 and 2.'))
+    
+    def __str__(self):
+        return f"History of games"
