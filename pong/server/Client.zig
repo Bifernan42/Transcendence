@@ -19,58 +19,58 @@ const net = std.net;
 const log = std.log;
 const posix = std.posix;
 const RingBuffer = std.RingBuffer;
-const Player = @import("Player.zig");
-const Client = @This();
 
-address: net.Address = undefined,
-socket: posix.socket_t = 0,
-player: Player = Player.default,
+pub const Client = struct {
+    address: net.Address = undefined,
+    socket: posix.socket_t = 0,
+    id: ?u32 = null,
 
-pub fn init(address: net.Address, socket: posix.socket_t, player: Player) Client {
-    return .{
-        .address = address,
-        .socket = socket,
-        .player = player,
+    pub fn init(address: net.Address, socket: posix.socket_t) Client {
+        return .{
+            .address = address,
+            .socket = socket,
+            .id = null,
+        };
+    }
+
+    pub fn deinit(self: *Client) void {
+        if (self.socket != -1) {
+            posix.close(self.socket);
+        }
+        self.* = undefined;
+    }
+
+    pub fn readRequest(self: *Client, request: *lib.Request) !void {
+        var buffer: [lib.getBufferSize(1, lib.Request)]u8 = undefined;
+        const rbytes = try posix.recv(self.socket, buffer[0..], 0);
+        if (rbytes != buffer.len) {
+            return error.PartialRequest;
+        }
+        request.fromBytes(buffer[0..]);
+    }
+
+    pub fn sendResponse(self: *Client, response: *lib.Response) !void {
+        const bytes = response.asBytes();
+        const wbytes = try posix.send(self.socket, bytes[0..], 0);
+        if (wbytes != bytes.len) {
+            return error.PartialResponse;
+        }
+    }
+
+    pub fn format(
+        self: @This(),
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("{?d}:{}:{d}", .{ self.id, self.address, self.socket });
+    }
+
+    pub const default: Client = .{
+        .address = undefined,
+        .socket = 0,
+        .id = null,
     };
-}
-
-pub fn deinit(self: *Client) void {
-    if (self.socket != -1) {
-        posix.close(self.socket);
-    }
-    self.* = undefined;
-}
-
-pub fn readRequest(self: *Client, request: *lib.Request) !void {
-    var buffer: [lib.getBufferSize(1, lib.Request)]u8 = undefined;
-    const rbytes = try posix.recv(self.socket, buffer[0..], 0);
-    if (rbytes != buffer.len) {
-        return error.PartialRequest;
-    }
-    request.fromBytes(buffer[0..]);
-}
-
-pub fn sendResponse(self: *Client, response: *lib.Response) !void {
-    const bytes = response.toBytes();
-    const wbytes = try posix.send(self.socket, bytes[0..], 0);
-    if (wbytes != bytes.len) {
-        return error.PartialResponse;
-    }
-}
-
-pub fn format(
-    self: @This(),
-    comptime fmt: []const u8,
-    options: std.fmt.FormatOptions,
-    writer: anytype,
-) !void {
-    _ = fmt;
-    _ = options;
-    try writer.print("{s}:{}:{d}", .{ self.player.name, self.address, self.socket });
-}
-
-pub const default: Client = .{
-    .address = undefined,
-    .socket = 0,
-    .player = Player.default,
 };

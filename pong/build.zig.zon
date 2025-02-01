@@ -2,9 +2,9 @@
     .name = "pong",
     .version = "0.0.0",
     .dependencies = .{
-            .@"raylib-zig" = .{
-            .url = "git+https://github.com/Not-Nik/raylib-zig?ref=devel#58724227e7fd90bebfcbd44c6013231447a67ff2",
-            .hash = "1220eedbc450fcfced1599d69f1e2c38b60af51616dbf724f6b9a8ed2c2a7c62cf9c",
+        .@"raylib-zig" = .{
+            .url = "https://github.com/pierrelgol/raylib-zig/archive/refs/tags/transcendance.tar.gz",
+            .hash = "12206dcab020370b4d496839c31cc24715c45a7b6f7f446a1a2def0d0d6c49779422",
         },
     },
     .paths = .{

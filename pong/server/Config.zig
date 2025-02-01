@@ -20,21 +20,16 @@ const mem = std.mem;
 const net = std.net;
 const log = std.log;
 const posix = std.posix;
-const ServerOptions = @import("Server.zig").ServerOptions;
+const Pong = @import("Pong.zig");
 const PongOptions = @import("Pong.zig").PongOptions;
-const AiDifficulty = @import("Pong.zig").AiDifficulty;
 
 const Config = @This();
 
 envp: process.EnvMap,
-pong_config: PongOptions,
-serv_config: ServerOptions,
 
 pub fn init(allocator: mem.Allocator) !Config {
     return .{
         .envp = try process.getEnvMap(allocator),
-        .pong_config = .{},
-        .serv_config = .{},
     };
 }
 
@@ -42,103 +37,173 @@ pub fn deinit(self: *Config) void {
     self.envp.deinit();
 }
 
-pub fn parse(self: *Config) !void {
-    if (self.envp.get("SSP_PONG_BALL_RADIUS")) |value| {
-        self.pong_config.ball_radius = parseOfFallback(u32, "SSP_PONG_BALL_RADIUS", value, PongOptions.default.ball_radius);
+pub fn parseEnviromentVariables(self: *Config) PongOptions {
+    const envp = self.envp;
+    var options: PongOptions = .init();
+
+    if (envp.get("SSP_BOARD_WIDTH")) |value| {
+        options.board_width = parseOrSetDefault("SSP_BOARD_WIDTH", u16, value, PongOptions.default.board_width);
     } else {
-        logFallback("SSP_PONG_BALL_RADIUS", u32, PongOptions.default.ball_radius);
+        options.board_width = warnAndSetDefault("SSP_BOARD_WIDTH", u16, PongOptions.default.board_width);
     }
 
-    if (self.envp.get("SSP_PONG_BALL_SPEED")) |value| {
-        self.pong_config.ball_speed = parseOfFallback(u32, "SSP_PONG_BALL_SPEED", value, PongOptions.default.ball_speed);
+    if (envp.get("SSP_BOARD_HEIGHT")) |value| {
+        options.board_height = parseOrSetDefault("SSP_BOARD_HEIGHT", u16, value, PongOptions.default.board_height);
     } else {
-        logFallback("SSP_PONG_BALL_SPEED", u32, PongOptions.default.ball_speed);
+        options.board_height = warnAndSetDefault("SSP_BOARD_HEIGHT", u16, PongOptions.default.board_height);
     }
 
-    if (self.envp.get("SSP_PONG_BOARD_WIDTH")) |value| {
-        self.pong_config.board_width = parseOfFallback(u32, "SSP_PONG_BOARD_WIDTH", value, PongOptions.default.board_width);
+    if (envp.get("SSP_PADDLE_WIDTH")) |value| {
+        options.paddle_width = parseOrSetDefault("SSP_PADDLE_WIDTH", u16, value, PongOptions.default.paddle_width);
     } else {
-        logFallback("SSP_PONG_BOARD_WIDTH", u32, PongOptions.default.board_width);
+        options.paddle_width = warnAndSetDefault("SSP_PADDLE_WIDTH", u16, PongOptions.default.paddle_width);
     }
 
-    if (self.envp.get("SSP_PONG_BOARD_HEIGHT")) |value| {
-        self.pong_config.board_height = parseOfFallback(u32, "SSP_PONG_BOARD_HEIGHT", value, PongOptions.default.board_height);
+    if (envp.get("SSP_PADDLE_HEIGHT")) |value| {
+        options.paddle_height = parseOrSetDefault("SSP_PADDLE_HEIGHT", u16, value, PongOptions.default.paddle_height);
     } else {
-        logFallback("SSP_PONG_BOARD_HEIGHT", u32, PongOptions.default.board_height);
+        options.paddle_height = warnAndSetDefault("SSP_PADDLE_HEIGHT", u16, PongOptions.default.paddle_height);
     }
 
-    if (self.envp.get("SSP_PONG_PADDLE_WIDTH")) |value| {
-        self.pong_config.paddle_width = parseOfFallback(u32, "SSP_PONG_PADDLE_WIDTH", value, PongOptions.default.paddle_width);
+    if (envp.get("SSP_PADDLE_SPEED")) |value| {
+        options.paddle_speed = parseOrSetDefault("SSP_PADDLE_SPEED", u16, value, PongOptions.default.paddle_speed);
     } else {
-        logFallback("SSP_PONG_PADDLE_WIDTH", u32, PongOptions.default.paddle_width);
+        options.paddle_speed = warnAndSetDefault("SSP_PADDLE_SPEED", u16, PongOptions.default.paddle_speed);
     }
 
-    if (self.envp.get("SSP_PONG_PADDLE_HEIGHT")) |value| {
-        self.pong_config.paddle_height = parseOfFallback(u32, "SSP_PONG_PADDLE_HEIGHT", value, PongOptions.default.paddle_height);
+    if (envp.get("SSP_BALL_SPEED")) |value| {
+        options.ball_speed = parseOrSetDefault("SSP_BALL_SPEED", u16, value, PongOptions.default.ball_speed);
     } else {
-        logFallback("SSP_PONG_PADDLE_HEIGHT", u32, PongOptions.default.paddle_height);
+        options.ball_speed = warnAndSetDefault("SSP_BALL_SPEED", u16, PongOptions.default.ball_speed);
     }
 
-    if (self.envp.get("SSP_PONG_PADDLE_SPEED")) |value| {
-        self.pong_config.paddle_speed = parseOfFallback(u32, "SSP_PONG_PADDLE_SPEED", value, PongOptions.default.paddle_speed);
+    if (envp.get("SSP_BALL_RADIUS")) |value| {
+        options.ball_radius = parseOrSetDefault("SSP_BALL_RADIUS", u16, value, PongOptions.default.ball_radius);
     } else {
-        logFallback("SSP_PONG_PADDLE_SPEED", u32, PongOptions.default.paddle_speed);
+        options.ball_radius = warnAndSetDefault("SSP_BALL_RADIUS", u16, PongOptions.default.ball_radius);
     }
 
-    if (self.envp.get("SSP_SERV_MAXCONN")) |value| {
-        self.serv_config.maxconn = parseOfFallback(u8, "SSP_SERV_MAXCONN", value, ServerOptions.default.maxconn);
+    if (envp.get("SSP_MAX_SCORE")) |value| {
+        options.max_score = parseOrSetDefault("SSP_MAX_SCORE", u8, value, PongOptions.default.max_score);
     } else {
-        logFallback("SSP_SERV_MAXCONN", u8, ServerOptions.default.maxconn);
+        options.max_score = warnAndSetDefault("SSP_MAX_SCORE", u8, PongOptions.default.max_score);
     }
 
-    if (self.envp.get("SSP_SERV_P1TOK")) |value| {
-        self.serv_config.client1_id = parseOfFallback(u8, "SSP_SERV_P1TOK", value, ServerOptions.default.client1_id);
+    if (envp.get("SSP_GAME_KIND")) |value| {
+        if (std.mem.eql(u8, "local_ai", value)) {
+            options.game_kind = .local_ai;
+        } else if (std.mem.eql(u8, "local_mp", value)) {
+            options.game_kind = .local_mp;
+        } else if (std.mem.eql(u8, "remote_mp", value)) {
+            options.game_kind = .remote_mp;
+        } else {
+            log.warn("failed to parse value associated with variable '{s}' because : {s} is invalid. defaults to : {s}", .{ "SSP_GAME_KIND", value, @tagName(PongOptions.default.game_kind) });
+            options.game_kind = warnAndSetDefault("SSP_GAME_KIND", Pong.Kind, PongOptions.default.game_kind);
+        }
     } else {
-        logFallback("SSP_SERV_P1TOK", u8, ServerOptions.default.client1_id);
+        options.game_kind = warnAndSetDefault("SSP_GAME_KIND", Pong.Kind, PongOptions.default.game_kind);
     }
 
-    if (self.envp.get("SSP_SERV_P2TOK")) |value| {
-        self.serv_config.client2_id = parseOfFallback(u8, "SSP_SERV_P2TOK", value, ServerOptions.default.client2_id);
+    if (envp.get("SSP_PLAYER1_TOKENID")) |value| {
+        options.player1_token = parseOrSetDefault("SSP_PLAYER1_TOKENID", u32, value, PongOptions.default.player1_token);
     } else {
-        logFallback("SSP_SERV_P2TOK", u8, ServerOptions.default.client2_id);
+        options.player1_token = warnAndSetDefault("SSP_PLAYER1_TOKENID", u32, PongOptions.default.player1_token);
     }
 
-    if (self.envp.get("SSP_SERV_TICKRATE")) |value| {
-        self.serv_config.tickrate = parseOfFallback(u16, "SSP_SERV_TICKRATE", value, ServerOptions.default.tickrate);
+    if (envp.get("SSP_PLAYER2_TOKENID")) |value| {
+        options.player2_token = parseOrSetDefault("SSP_PLAYER2_TOKENID", u32, value, PongOptions.default.player2_token);
     } else {
-        logFallback("SSP_SERV_TICKRATE", u16, ServerOptions.default.tickrate);
+        options.player2_token = warnAndSetDefault("SSP_PLAYER2_TOKENID", u32, PongOptions.default.player2_token);
     }
 
-    if (self.envp.get("SSP_SERV_BIND_IP")) |value| {
-        self.serv_config.ip = value;
+    if (envp.get("SSP_SERVER_IP")) |value| {
+        options.server_ip = try_ip_first: {
+            if (std.net.Address.parseIp(value, 0)) |_| {
+                break :try_ip_first value;
+            } else |err| {
+                log.warn("failed to parse value associated with variable '{s}' because : {!}. defaults to : {s}", .{ "SSP_SERVER_IP", err, PongOptions.default.server_ip });
+                break :try_ip_first PongOptions.default.server_ip;
+            }
+        };
     } else {
-        self.serv_config.ip = ServerOptions.default.ip;
-        logFallback("SSP_SERV_BIND_IP", []const u8, ServerOptions.default.ip);
+        options.server_ip = warnAndSetDefault("SSP_SERVER_IP", []const u8, PongOptions.default.server_ip);
     }
 
-    if (self.envp.get("SSP_SERV_ON_PORT")) |value| {
-        self.serv_config.port = parseOfFallback(u16, "SSP_SERV_ON_PORT", value, ServerOptions.default.port);
+    if (envp.get("SSP_SERVER_PORT")) |value| {
+        options.server_port = parseOrSetDefault("SSP_SERVER_PORT", u16, value, PongOptions.default.server_port);
     } else {
-        logFallback("SSP_SERV_ON_PORT", u16, ServerOptions.default.port);
+        options.server_port = warnAndSetDefault("SSP_SERVER_PORT", u16, PongOptions.default.server_port);
     }
 
-    if (self.envp.get("SSP_SERV_HEADLESS")) |value| {
-        self.serv_config.headless = if (compare(value, "true")) true else false;
+    if (envp.get("SSP_SERVER_TICKRATE")) |value| {
+        options.server_tickrate = parseOrSetDefault("SSP_SERVER_TICKRATE", u16, value, PongOptions.default.server_tickrate);
+    } else {
+        options.server_tickrate = warnAndSetDefault("SSP_SERVER_TICKRATE", u16, PongOptions.default.server_tickrate);
     }
+
+    if (envp.get("SSP_SERVER_CLIENT_MAX")) |value| {
+        options.server_client_max = parseOrSetDefault("SSP_SERVER_CLIENT_MAX", u8, value, PongOptions.default.server_client_max);
+    } else {
+        options.server_client_max = warnAndSetDefault("SSP_SERVER_CLIENT_MAX", u8, PongOptions.default.server_client_max);
+    }
+
+    if (envp.get("SSP_SERVER_HEADLESS")) |value| {
+        if (std.mem.eql(u8, "true", value)) {
+            options.server_headless = true;
+        } else if (std.mem.eql(u8, "false", value)) {
+            options.server_headless = false;
+        } else {
+            options.server_headless = warnAndSetDefault("SSP_SERVER_HEADLESS", bool, PongOptions.default.server_headless);
+        }
+    } else {
+        options.server_headless = warnAndSetDefault("SSP_SERVER_HEADLESS", bool, PongOptions.default.server_headless);
+    }
+
+    return options;
 }
 
-fn parseOfFallback(comptime T: type, key: []const u8, buff: []const u8, fallback: T) T {
-    return std.fmt.parseInt(T, buff, 10) catch |err| {
-        std.log.err("error while parsing value associated with '{s}' : {!}", .{ key, err });
-        std.log.info("fallback to : '{any}'", .{fallback});
-        return fallback;
+pub fn parseOrSetDefault(varname: []const u8, comptime T: type, value: []const u8, default: T) T {
+    return switch (@typeInfo(T)) {
+        .float => {
+            return std.fmt.parseFloat(T, value) catch |err| {
+                log.warn("failed to parse value associated with variable '{s}' because : {!}. defaults to : {d:.2}", .{ varname, err, default });
+                return default;
+            };
+        },
+        .int => {
+            return std.fmt.parseInt(T, value, 10) catch |err| {
+                log.warn("failed to parse value associated with variable '{s}' because : {!}. defaults to : {d}", .{ varname, err, default });
+                return default;
+            };
+        },
+        else => @compileError("unsupported type"),
     };
 }
 
-fn logFallback(key: []const u8, comptime T: type, fallback: T) void {
-    log.warn("No value specified for '{s}', defaulting to value : {any}", .{ key, fallback });
-}
-
-fn compare(s1: []const u8, s2: []const u8) bool {
-    return std.mem.eql(u8, s1, s2);
+pub fn warnAndSetDefault(varname: []const u8, comptime T: type, default: T) T {
+    return switch (@typeInfo(T)) {
+        .float => {
+            log.warn("no value provided for variable '{s}', defaulting to : {d:.2}", .{ varname, default });
+            return default;
+        },
+        .@"enum" => {
+            log.warn("no value provided for variable '{s}', defaulting to : {s}", .{ varname, @tagName(default) });
+            return default;
+        },
+        .int => {
+            log.warn("no value provided for variable '{s}', defaulting to : {d}", .{ varname, default });
+            return default;
+        },
+        .bool => {
+            log.warn("no value provided for variable '{s}', defaulting to : {any}", .{ varname, default });
+            return default;
+        },
+        else => |t| {
+            if (std.mem.eql(u8, @typeName(@TypeOf(t)), "[]const u8")) {
+                log.warn("no value provided for variable '{s}', defaulting to : {s}", .{ varname, default });
+                return default;
+            }
+            return default;
+        },
+    };
 }
