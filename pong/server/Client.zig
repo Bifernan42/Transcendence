@@ -23,12 +23,14 @@ const RingBuffer = std.RingBuffer;
 pub const Client = struct {
     address: net.Address = undefined,
     socket: posix.socket_t = 0,
+    response: lib.Response,
     id: ?u32 = null,
 
     pub fn init(address: net.Address, socket: posix.socket_t) Client {
         return .{
             .address = address,
             .socket = socket,
+            .response = lib.Response.init(),
             .id = null,
         };
     }

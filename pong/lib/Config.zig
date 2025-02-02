@@ -21,7 +21,6 @@ const net = std.net;
 const log = std.log;
 const posix = std.posix;
 const Pong = @import("Pong.zig");
-const PongOptions = @import("Pong.zig").PongOptions;
 
 const Config = @This();
 
@@ -98,10 +97,10 @@ pub fn parseEnviromentVariables(self: *Config) PongOptions {
             options.game_kind = .remote_mp;
         } else {
             log.warn("failed to parse value associated with variable '{s}' because : {s} is invalid. defaults to : {s}", .{ "SSP_GAME_KIND", value, @tagName(PongOptions.default.game_kind) });
-            options.game_kind = warnAndSetDefault("SSP_GAME_KIND", Pong.Kind, PongOptions.default.game_kind);
+            options.game_kind = warnAndSetDefault("SSP_GAME_KIND", PongOptions.Kind, PongOptions.default.game_kind);
         }
     } else {
-        options.game_kind = warnAndSetDefault("SSP_GAME_KIND", Pong.Kind, PongOptions.default.game_kind);
+        options.game_kind = warnAndSetDefault("SSP_GAME_KIND", PongOptions.Kind, PongOptions.default.game_kind);
     }
 
     if (envp.get("SSP_PLAYER1_TOKENID")) |value| {
@@ -207,3 +206,102 @@ pub fn warnAndSetDefault(varname: []const u8, comptime T: type, default: T) T {
         },
     };
 }
+
+pub const PongOptions = struct {
+    board_width: u16 = 1024,
+    board_height: u16 = 512,
+    paddle_width: u16 = 8,
+    paddle_height: u16 = 64,
+    paddle_speed: u16 = 8,
+    ball_speed: u16 = 128,
+    ball_radius: u16 = 4,
+    max_score: u8 = 3,
+    game_kind: Kind = .local_ai,
+    player1_token: u32 = 1,
+    player2_token: u32 = 2,
+    server_ip: []const u8 = "127.0.0.1",
+    server_port: u16 = 8080,
+    server_tickrate: u16 = 60,
+    server_client_max: u8 = 4,
+    server_headless: bool = false,
+    server_timeout: u16 = std.time.ms_per_s / 60,
+
+    pub const Kind = enum {
+        local_ai,
+        local_mp,
+        remote_mp,
+    };
+
+    pub fn init() PongOptions {
+        return PongOptions.default;
+    }
+
+    pub const default: PongOptions = .{
+        .board_width = 1024,
+        .board_height = 512,
+        .paddle_width = 8,
+        .paddle_height = 64,
+        .paddle_speed = 8,
+        .ball_speed = 128,
+        .ball_radius = 4,
+        .max_score = 3,
+        .game_kind = .local_ai,
+        .player1_token = 1,
+        .player2_token = 2,
+        .server_ip = "127.0.0.1",
+        .server_port = 8080,
+        .server_tickrate = 60,
+        .server_client_max = 4,
+        .server_headless = false,
+        .server_timeout = 60_000,
+    };
+
+    pub fn getBoardHalfWidth(self: *const PongOptions) u16 {
+        return @divFloor(self.board_width, 2);
+    }
+    pub fn getBoardHalfHeight(self: *const PongOptions) u16 {
+        return @divFloor(self.board_height, 2);
+    }
+
+    pub fn getPaddleHalfWidth(self: *const PongOptions) u16 {
+        return @divFloor(self.paddle_width, 2);
+    }
+
+    pub fn getPaddleHalfHeight(self: *const PongOptions) u16 {
+        return @divFloor(self.paddle_height, 2);
+    }
+
+    pub fn getPlayer1Paddle(self: *const PongOptions) rl.Rectangle {
+        return .{
+            .x = @floatFromInt(self.getPaddleHalfWidth()),
+            .y = @floatFromInt(self.getBoardHalfHeight() - self.getPaddleHalfHeight()),
+            .width = @floatFromInt(self.paddle_width),
+            .height = @floatFromInt(self.paddle_height),
+        };
+    }
+
+    pub fn getPlayer2Paddle(self: *const PongOptions) rl.Rectangle {
+        return .{
+            .x = @floatFromInt(self.board_width - (self.paddle_width + self.getPaddleHalfWidth())),
+            .y = @floatFromInt(self.getBoardHalfHeight() - self.getPaddleHalfHeight()),
+            .width = @floatFromInt(self.paddle_width),
+            .height = @floatFromInt(self.paddle_height),
+        };
+    }
+
+    pub fn getBallPosition(self: *const PongOptions) rl.Vector2 {
+        return .{
+            .x = @floatFromInt(self.getBoardHalfWidth()),
+            .y = @floatFromInt(self.getBoardHalfHeight()),
+        };
+    }
+
+    pub fn getBoard(self: *const PongOptions) rl.Rectangle {
+        return .{
+            .x = 0,
+            .y = 0,
+            .width = @floatFromInt(self.board_width),
+            .height = @floatFromInt(self.board_height),
+        };
+    }
+};

@@ -25,10 +25,11 @@ const lib = @import("libpong");
 const Request = lib.Request;
 const Response = lib.Response;
 
-const Pong = @import("Pong.zig");
-const Config = @import("Config.zig");
+const Pong = lib.Pong;
+const Config = lib.Config;
 const Client = @import("Client.zig").Client;
 const Server = @import("Server.zig").Server;
+const PongOptions = Config.PongOptions;
 
 pub fn main() !void {
     var gpa: heap.GeneralPurposeAllocator(.{}) = .init;
@@ -40,7 +41,7 @@ pub fn main() !void {
     };
     defer config.deinit();
 
-    const options: Pong.PongOptions = config.parseEnviromentVariables();
+    const options: PongOptions = config.parseEnviromentVariables();
 
     const address = net.Address.parseIp(options.server_ip, options.server_port) catch |err| {
         log.err("fatal error encountered, shutting down : {!}", .{err});
@@ -70,38 +71,47 @@ pub fn main() !void {
     }
 }
 
-var timeout: i32 = 0;
-
-pub fn runWithHead(server: *Server, options: Pong.PongOptions) !void {
+pub fn runWithHead(server: *Server, options: Config.PongOptions) !void {
     log.info("{} running...", .{server});
-    rl.initWindow(server.pong.board_width, server.pong.board_height, "Pong Server");
+    rl.initWindow(server.options.board_width, server.options.board_height, "Pong Server");
     defer rl.closeWindow();
     rl.setTargetFPS(options.server_tickrate);
-    timeout = std.time.ms_per_s * (server.options.server_tickrate);
     while (!rl.windowShouldClose()) {
-        rl.beginDrawing();
-        defer rl.endDrawing();
-        server.pong.draw(.{});
-        try handleNetwork(server, &server.pong);
-        rl.drawFPS(20, 20);
+        try sendAndFetchPongEvents(server, &server.pong);
+        renderPongEvents(&server.pong);
     }
 }
 
-pub fn runHeadless(server: *Server, options: Pong.PongOptions) !void {
+pub fn runHeadless(server: *Server, options: Config.PongOptions) !void {
     log.info("{} running...", .{server});
-    var pong: Pong.Pong = Pong.Pong.init(options);
+    var pong: Pong = Pong.init(options);
     while (true) {
-        try handleNetwork(server, &pong);
+        try sendAndFetchPongEvents(server, &pong);
     }
 }
 
-pub fn handleNetwork(server: *Server, pong: *Pong) !void {
+pub fn renderPongEvents(pong: *const lib.Pong) void {
+    rl.beginDrawing();
+    rl.clearBackground(rl.Color.black);
+    pong.drawBoard(128, 4.0, rl.Color.gold, rl.Color.dark_gray);
+    pong.drawPaddles(4.0, rl.Color.red, rl.Color.orange);
+    pong.drawBall(2.0, rl.Color.green, rl.Color.dark_green);
+    rl.drawFPS(20, 20);
+    rl.endDrawing();
+}
+
+pub fn sendAndFetchPongEvents(server: *Server, pong: *Pong) !void {
     const pollfds = server.pollfds.items[0..];
-    const npfds = posix.poll(pollfds, timeout) catch |err| {
+
+    const npfds = posix.poll(pollfds, 0) catch |err| {
         log.err("{} poll failed with {!}", .{ server, err });
         return err;
     };
-    if (npfds == 0) return;
+
+    if (npfds == 0) {
+        return;
+    }
+
     if (pollfds[0].revents & posix.POLL.IN == posix.POLL.IN) {
         log.info("{} has one pending connection request.", .{server});
         const new_client = server.accept() catch |err| {
@@ -136,51 +146,18 @@ pub fn handleNetwork(server: *Server, pong: *Pong) !void {
             };
             log.info("{} received {} from {}", .{ server, request, client });
             pfd.events = posix.POLL.OUT;
-            handleRequest(server, client, &request);
+            pong.processRequest(&request);
+            var response = pong.serialize();
+            client.response.fromBytes(response.asBytes());
         } else if (pfd.revents & posix.POLL.OUT == posix.POLL.OUT) {
-            @branchHint(.likely);
-            var response = pong.play();
+            const response = &client.response;
             log.info("{} sending {} to {}", .{ server, response, client });
-            client.sendResponse(&response) catch |err| {
+            client.sendResponse(response) catch |err| {
                 log.err("{} while sending response to {} got : {!}", .{ server, client, err });
                 server.removeClient(client);
                 return;
             };
             pfd.events = posix.POLL.IN;
         }
-    }
-}
-
-pub fn handleRequest(server: *Server, client: *Client, request: *lib.Request) void {
-    if (client.id) |known_client_id| {
-        @branchHint(.likely);
-        handleRequestFromKnownClient(server, known_client_id, request);
-    } else {
-        @branchHint(.cold);
-        if (request.client_id == server.options.player1_token) { // player1 first connection
-            client.*.id = server.options.player1_token;
-            server.pong.player1_status = .ready;
-        } else if (request.client_id == server.options.player2_token) { // player2 first connection
-            client.*.id = server.options.player2_token;
-            server.pong.player2_status = .ready;
-        } else { // random spectator
-            var rand = std.Random.DefaultPrng.init(@abs(request.timestamp));
-            client.*.id = @as(u32, @truncate(rand.next()));
-        }
-        handleRequestFromKnownClient(server, client.id orelse 0, request);
-    }
-}
-
-pub fn handleRequestFromKnownClient(server: *Server, id: u32, request: *lib.Request) void {
-    switch (server.options.getRole(id)) {
-        .player1 => {
-            server.pong.player1_move = request.player1_action;
-            server.pong.player1_status = .ready;
-        },
-        .player2 => {
-            server.pong.player2_move = request.player2_action;
-            server.pong.player1_status = .ready;
-        },
-        else => return,
     }
 }

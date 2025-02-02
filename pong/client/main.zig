@@ -32,38 +32,55 @@ pub fn main() !void {
     const stream = try net.tcpConnectToHost(gpa.allocator(), "127.0.0.1", 8080);
     defer stream.close();
 
-    const bytes_written = stream.write(request.asBytes()) catch |err| {
-        log.err("fatal error encountered : {!}. closing now.", .{err});
-        return;
-    };
-    const bytes_read = stream.read(response.asBytes()) catch |err| {
+    sendAndFetchPongStates(stream, &request, &response) catch |err| {
         log.err("fatal error encountered : {!}. closing now.", .{err});
         return;
     };
 
-    log.info("{} : sent {d} bytes, and received {d} bytes", .{ stream, bytes_written, bytes_read });
-
-    rl.initWindow(response.board_width, response.board_height, "Pong Client");
+    rl.initWindow(@intCast(response.board_width), @intCast(response.board_height), "Pong Client");
     defer rl.closeWindow();
 
     var req: lib.Request = request;
     var res: lib.Response = response;
     while (!rl.windowShouldClose()) {
-        network(stream, &req, &res) catch |err| {
+        var pong: lib.Pong = .initFromResponse(res);
+
+        renderPongState(&pong);
+        updatePongState(&req);
+        sendAndFetchPongStates(stream, &req, &res) catch |err| {
             log.err("fatal error encountered : {!}. closing now.", .{err});
             break;
         };
-        rl.beginDrawing();
-        rl.clearBackground(rl.Color.black);
-        rl.drawRectangleLines(0, 0, res.board_width, res.board_height, rl.Color.light_gray);
-        rl.drawRectangle(0, 0, res.board_width, res.board_height, rl.Color.black);
-        rl.drawFPS(20, 20);
-
-        rl.endDrawing();
     }
 }
 
-pub fn network(stream: net.Stream, request: *lib.Request, response: *lib.Response) !void {
+pub fn updatePongState(request: *lib.Request) void {
+    request.player1_action = .pressed_none;
+    request.player2_action = .pressed_none;
+    if (rl.isKeyDown(.w)) {
+        request.player1_action = .pressed_up;
+    } else if (rl.isKeyDown(.s)) {
+        request.player1_action = .pressed_down;
+    } else if (rl.isKeyDown(.up)) {
+        request.player2_action = .pressed_up;
+    } else if (rl.isKeyDown(.down)) {
+        request.player2_action = .pressed_down;
+    }
+    request.timestamp = std.time.milliTimestamp();
+}
+
+pub fn renderPongState(pong: *const lib.Pong) void {
+    rl.beginDrawing();
+    rl.clearBackground(rl.Color.black);
+    rl.clearBackground(rl.Color.black);
+    pong.drawBoard(128, 4.0, rl.Color.gold, rl.Color.dark_gray);
+    pong.drawPaddles(4.0, rl.Color.red, rl.Color.orange);
+    pong.drawBall(2.0, rl.Color.green, rl.Color.dark_green);
+    rl.drawFPS(20, 20);
+    rl.endDrawing();
+}
+
+pub fn sendAndFetchPongStates(stream: net.Stream, request: *lib.Request, response: *lib.Response) !void {
     const bytes_written = try stream.write(request.asBytes());
     const bytes_read = try stream.read(response.asBytes());
     if (bytes_written != full_write_size or bytes_read != full_read_size) {

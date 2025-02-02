@@ -11,9 +11,14 @@
 // ************************************************************************** //
 
 const std = @import("std");
+const rl = @import("raylib");
+pub const Pong = @import("Pong.zig");
+pub const Config = @import("Config.zig");
+pub const PongOptions = Config.PongOptions;
 
 pub const PlayerStatus = enum(u8) {
-    unavailable,
+    absent,
+    waiting,
     ready,
     scored,
 
@@ -29,7 +34,7 @@ pub const PlayerStatus = enum(u8) {
     }
 };
 
-pub const Role = enum(u8) {
+pub const PlayerKind = enum(u8) {
     player1,
     player2,
     spectator,
@@ -51,11 +56,6 @@ pub const PlayerAction = enum(u8) {
     pressed_none,
     pressed_up,
     pressed_down,
-    pressed_play,
-    pressed_pause,
-    pressed_quit,
-    pressed_replay,
-    pressed_ignore,
 
     pub fn format(
         self: @This(),
@@ -70,27 +70,27 @@ pub const PlayerAction = enum(u8) {
 };
 
 pub const Response = packed struct(u512) {
-    board_width: u16,
-    board_height: u16,
+    board_width: u32,
+    board_height: u32,
 
-    paddle_width: u16,
-    paddle_height: u16,
+    paddle_width: u32,
+    paddle_height: u32,
 
-    player1_x: u16,
-    player1_y: u16,
+    player1_x: u32,
+    player1_y: u32,
 
-    player2_x: u16,
-    player2_y: u16,
+    player2_x: u32,
+    player2_y: u32,
 
-    ball_radius: u16,
-    ball_x: u16,
-    ball_y: u16,
+    ball_radius: u32,
+    ball_x: u32,
+    ball_y: u32,
     player1_score: u8,
     player2_score: u8,
     player1_status: PlayerStatus,
     player2_status: PlayerStatus,
     timestamp: i64,
-    _padding: u240,
+    _padding: u64,
 
     pub fn init() Response {
         return .{
@@ -107,8 +107,8 @@ pub const Response = packed struct(u512) {
             .ball_y = 0,
             .player1_score = 0,
             .player2_score = 0,
-            .player1_status = .unavailable,
-            .player2_status = .unavailable,
+            .player1_status = .absent,
+            .player2_status = .absent,
             .timestamp = 0,
             ._padding = 0,
         };
@@ -174,3 +174,15 @@ pub const Request = packed struct(u128) {
 pub fn getBufferSize(capacity: usize, comptime T: type) usize {
     return capacity * @sizeOf(T);
 }
+
+pub const default_vector2: rl.Vector2 = .{
+    .x = 0,
+    .y = 0,
+};
+
+pub const default_rectangle: rl.Rectangle = .{
+    .x = 0,
+    .y = 0,
+    .width = 0,
+    .height = 0,
+};

@@ -21,21 +21,23 @@ const lib = @import("libpong");
 const rg = @import("raygui");
 const rl = @import("raylib");
 const Client = @import("Client.zig").Client;
-const Pong = @import("Pong.zig");
+const Pong = lib.Pong;
+const Config = lib.Config;
+const PongOptions = Config.PongOptions;
 
 pub const Server = struct {
-    options: Pong.PongOptions,
-    pong: Pong.Pong,
+    options: Config.PongOptions,
+    pong: Pong,
     allocator: mem.Allocator,
     address: net.Address,
     socket: posix.socket_t,
     clients: Buffer(Client),
     pollfds: Buffer(posix.pollfd),
 
-    pub fn init(allocator: mem.Allocator, address: net.Address, options: Pong.PongOptions) error{OutOfMemory}!Server {
+    pub fn init(allocator: mem.Allocator, address: net.Address, options: Config.PongOptions) error{OutOfMemory}!Server {
         return .{
             .options = options,
-            .pong = Pong.Pong.init(options),
+            .pong = Pong.init(options),
             .allocator = allocator,
             .socket = -1,
             .address = address,
