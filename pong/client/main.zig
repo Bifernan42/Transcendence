@@ -42,9 +42,11 @@ pub fn main() !void {
 
     var req: lib.Request = request;
     var res: lib.Response = response;
+    rl.setTargetFPS(120);
     while (!rl.windowShouldClose()) {
         var pong: lib.Pong = .initFromResponse(res);
 
+        log.debug("sending {}, received {}", .{ req, res });
         renderPongState(&pong);
         updatePongState(&req);
         sendAndFetchPongStates(stream, &req, &res) catch |err| {

@@ -241,7 +241,7 @@ pub const PongOptions = struct {
         .board_height = 512,
         .paddle_width = 8,
         .paddle_height = 64,
-        .paddle_speed = 8,
+        .paddle_speed = 256,
         .ball_speed = 128,
         .ball_radius = 4,
         .max_score = 3,
@@ -303,5 +303,16 @@ pub const PongOptions = struct {
             .width = @floatFromInt(self.board_width),
             .height = @floatFromInt(self.board_height),
         };
+    }
+
+    pub fn format(
+        self: @This(),
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try std.json.stringify(self, .{ .whitespace = .indent_2 }, writer);
     }
 };

@@ -22,12 +22,15 @@ player1: Player = Player.default,
 player2: Player = Player.default,
 board: Board = Board.default,
 ball: Ball = Ball.default,
+last_update: i64,
+now_update: i64,
 
 pub fn init(options: Config.PongOptions) Pong {
     const paddle1: Paddle = .init(options.getPlayer1Paddle());
     const paddle2: Paddle = .init(options.getPlayer2Paddle());
     const board: Board = .init(options.getBoard());
-    const ball: Ball = .init(options.getBallPosition(), @floatFromInt(options.ball_radius));
+    var ball: Ball = .init(options.getBallPosition(), @floatFromInt(options.ball_radius));
+    ball.reset(&board);
     switch (options.game_kind) {
         .local_ai => {
             return .{
@@ -36,6 +39,8 @@ pub fn init(options: Config.PongOptions) Pong {
                 .ball = ball,
                 .player1 = Player.init(.player1, paddle1),
                 .player2 = Player.init(.bot, paddle2),
+                .last_update = 0,
+                .now_update = std.time.milliTimestamp(),
             };
         },
         .local_mp => {
@@ -45,6 +50,8 @@ pub fn init(options: Config.PongOptions) Pong {
                 .ball = ball,
                 .player1 = Player.init(.player1, paddle1),
                 .player2 = Player.init(.player2, paddle2),
+                .last_update = 0,
+                .now_update = std.time.milliTimestamp(),
             };
         },
         .remote_mp => {
@@ -54,6 +61,8 @@ pub fn init(options: Config.PongOptions) Pong {
                 .ball = ball,
                 .player1 = Player.init(.player1, paddle1),
                 .player2 = Player.init(.player2, paddle2),
+                .last_update = 0,
+                .now_update = std.time.milliTimestamp(),
             };
         },
     }
@@ -92,6 +101,8 @@ pub fn initFromResponse(response: lib.Response) Pong {
             },
             @floatFromInt(response.ball_radius),
         ),
+        .last_update = response.timestamp,
+        .now_update = std.time.milliTimestamp(),
     };
 }
 
@@ -101,13 +112,13 @@ pub fn serialize(self: *const Pong) lib.Response {
         .board_height = self.options.board_height,
         .paddle_width = self.options.paddle_width,
         .paddle_height = self.options.paddle_height,
-        .player1_x = self.player1.getX(),
-        .player1_y = self.player1.getY(),
-        .player2_x = self.player2.getX(),
-        .player2_y = self.player2.getY(),
+        .player1_x = @truncate(self.player1.getX()),
+        .player1_y = @truncate(self.player1.getY()),
+        .player2_x = @truncate(self.player2.getX()),
+        .player2_y = @truncate(self.player2.getY()),
         .ball_radius = self.options.ball_radius,
-        .ball_x = self.ball.getX(),
-        .ball_y = self.ball.getY(),
+        .ball_x = @truncate(self.ball.getX()),
+        .ball_y = @truncate(self.ball.getY()),
         .player1_score = self.player1.getScore(),
         .player2_score = self.player2.getScore(),
         .player1_status = self.player1.getStatus(),
@@ -118,10 +129,62 @@ pub fn serialize(self: *const Pong) lib.Response {
 }
 
 pub fn processRequest(self: *Pong, request: *lib.Request) void {
-    self.player1.setAction(request.player1_action);
-    self.player1.move(@floatFromInt(self.options.paddle_speed), &self.board);
-    self.player2.setAction(request.player2_action);
-    self.player2.move(@floatFromInt(self.options.paddle_speed), &self.board);
+    self.last_update = self.now_update;
+    self.now_update = std.time.milliTimestamp();
+    const scaled_movement = scaleMovement(self.last_update, self.now_update, self.options.paddle_speed);
+    switch (self.options.game_kind) {
+        .local_ai => {
+            self.player1.setAction(request.player1_action);
+            self.player1.move(scaled_movement, &self.board);
+            self.player2.setAction(self.getAiNextAction());
+            self.player2.move(scaled_movement, &self.board);
+        },
+        else => {},
+    }
+    _ = self.ball.move(
+        scaleMovement(self.last_update, self.now_update, self.options.ball_speed),
+        &self.board,
+        self.player1.paddle.dimension,
+        self.player2.paddle.dimension,
+    );
+}
+
+pub fn getAiNextAction(self: *Pong) lib.PlayerAction {
+    const paddle = self.player2.paddle;
+    const paddle_center = paddle.dimension.y + (paddle.dimension.height / 2);
+    const ball_center = self.ball.position.y;
+
+    if (self.ball.velocity.x > 0) {
+        if (paddle_center < ball_center) {
+            return .pressed_down;
+        } else if (paddle_center > ball_center) {
+            return .pressed_up;
+        } else {
+            return .pressed_none;
+        }
+    } else {
+        if (self.ball.velocity.y > 0) {
+            if (ball_center > paddle_center) {
+                return .pressed_down;
+            } else {
+                return .pressed_up;
+            }
+        } else if (self.ball.velocity.y < 0) {
+            if (ball_center < paddle_center) {
+                return .pressed_up;
+            } else {
+                return .pressed_down;
+            }
+        } else {
+            return .pressed_none;
+        }
+    }
+}
+
+pub fn scaleMovement(last_time_ms: i64, now_time_ms: i64, movement_px_per_s: u32) f32 {
+    const elapsed_ms: i64 = now_time_ms - last_time_ms;
+    const elapsed_s: f32 = @as(f32, @floatFromInt(elapsed_ms)) / 1000.0;
+    return @as(f32, @floatFromInt(movement_px_per_s)) * elapsed_s;
 }
 
 pub fn drawBoard(self: Pong, number_of_strip: u8, thickness: f32, fg: rl.Color, bg: rl.Color) void {
@@ -202,11 +265,11 @@ pub const Player = struct {
     }
 
     pub inline fn getX(self: *const Player) u32 {
-        return @intFromFloat(self.paddle.dimension.x);
+        return @intFromFloat(@round(self.paddle.dimension.x));
     }
 
     pub inline fn getY(self: *const Player) u32 {
-        return @intFromFloat(self.paddle.dimension.y);
+        return @intFromFloat(@round(self.paddle.dimension.y));
     }
 
     pub const default: Player = .{
@@ -285,6 +348,8 @@ pub const Ball = struct {
         return .{
             .position = position,
             .radius = radius,
+            .velocity = lib.default_vector2,
+            .speed = 0.0,
         };
     }
 
@@ -298,11 +363,45 @@ pub const Ball = struct {
     }
 
     pub inline fn getX(self: *const Ball) u32 {
-        return @intFromFloat(self.position.x);
+        return @intFromFloat(@trunc(self.position.x));
     }
 
     pub inline fn getY(self: *const Ball) u32 {
-        return @intFromFloat(self.position.y);
+        return @intFromFloat(@trunc(self.position.y));
+    }
+
+    pub inline fn setSpeed(self: *Ball, speed: f32) void {
+        self.speed = speed;
+    }
+
+    pub inline fn setRadius(self: *Ball, radius: f32) void {
+        self.radius = radius;
+    }
+
+    pub inline fn setPosition(self: *Ball, position: rl.Vector2) void {
+        self.position = position;
+    }
+
+    pub inline fn setVelocity(self: *Ball, velocity: rl.Vector2) void {
+        self.velocity = velocity;
+    }
+
+    pub fn reset(self: *Ball, board: *const Board) void {
+        var randomizer = std.Random.DefaultPrng.init(@bitCast(std.time.timestamp()));
+        var rand = randomizer.random();
+        const direction = rand.intRangeLessThan(u8, 0, 4);
+        const dx = rand.float(f32);
+        const dy = rand.float(f32);
+        if (direction == 0) {
+            self.setVelocity(.{ .x = -dx, .y = dy });
+        } else if (direction == 1) {
+            self.setVelocity(.{ .x = dx, .y = -dy });
+        } else if (direction == 2) {
+            self.setVelocity(.{ .x = -dx, .y = -dy });
+        } else if (direction == 3) {
+            self.setVelocity(.{ .x = dx, .y = dy });
+        }
+        self.setPosition(board.getCenter());
     }
 
     pub fn drawBallLines(self: Ball, color: rl.Color) void {
@@ -315,6 +414,55 @@ pub const Ball = struct {
 
     pub fn drawHitBox(self: Ball, thickness: f32, color: rl.Color) void {
         rl.drawRectangleLinesEx(self.getHitbox(), thickness, color);
+    }
+
+    pub const SurfaceHit = enum {
+        left,
+        right,
+        up,
+        down,
+        lpad,
+        rpad,
+    };
+
+    pub fn move(self: *Ball, amount: f32, bounds: *const Board, paddle1: rl.Rectangle, paddle2: rl.Rectangle) ?SurfaceHit {
+        var hit: ?SurfaceHit = null;
+
+        self.position.x += self.velocity.x * amount;
+        self.position.y += self.velocity.y * amount;
+
+        const hitbox: rl.Rectangle = .{
+            .x = self.position.x - self.radius,
+            .y = self.position.y - self.radius,
+            .width = self.radius * 2.0,
+            .height = self.radius * 2.0,
+        };
+
+        if (self.position.y - self.radius < 0) {
+            self.velocity.y = -self.velocity.y;
+            hit = .up;
+        } else if (self.position.y + self.radius > bounds.dimension.height) {
+            self.velocity.y = -self.velocity.y;
+            hit = .down;
+        }
+
+        if (rl.checkCollisionRecs(hitbox, paddle1)) {
+            self.velocity.x = -self.velocity.x;
+            hit = .lpad;
+        } else if (rl.checkCollisionRecs(hitbox, paddle2)) {
+            self.velocity.x = -self.velocity.x;
+            hit = .rpad;
+        }
+
+        if (self.position.x - self.radius < 0) {
+            hit = .left;
+            self.reset(bounds);
+        } else if (self.position.x + self.radius > bounds.dimension.width) {
+            hit = .right;
+            self.reset(bounds);
+        }
+
+        return hit;
     }
 
     pub const default: Ball = .{

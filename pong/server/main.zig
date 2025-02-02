@@ -72,10 +72,10 @@ pub fn main() !void {
 }
 
 pub fn runWithHead(server: *Server, options: Config.PongOptions) !void {
-    log.info("{} running...", .{server});
+    log.info("{} running... {}", .{ server, options });
     rl.initWindow(server.options.board_width, server.options.board_height, "Pong Server");
     defer rl.closeWindow();
-    rl.setTargetFPS(options.server_tickrate);
+    rl.setTargetFPS(0);
     while (!rl.windowShouldClose()) {
         try sendAndFetchPongEvents(server, &server.pong);
         renderPongEvents(&server.pong);
