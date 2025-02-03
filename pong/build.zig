@@ -91,8 +91,16 @@ pub fn build(b: *std.Build) void {
     const run_server = b.addRunArtifact(server);
     const run_client = b.addRunArtifact(client);
 
-    run_client.step.dependOn(&run_server.step);
-    run_step.dependOn(&run_client.step);
+    if (b.args) |args| {
+        if (std.mem.eql(u8, args[0], "server")) {
+            run_step.dependOn(&run_server.step);
+        } else if (std.mem.eql(u8, args[0], "client")) {
+            run_step.dependOn(&run_client.step);
+            run_step.dependOn(&run_client.step);
+        }
+    } else {
+        run_step.dependOn(&run_server.step);
+    }
 
     // Test Step - Lib, Server, Client
     const test_lib = b.addTest(.{
