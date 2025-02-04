@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from .views import LoginView, LogoutView
+from .views import LoginView, LogoutView, UserStatusView
 from . import views
 
 urlpatterns = [
@@ -41,5 +41,7 @@ urlpatterns = [
     path('notifications/', views.view_notifications, name='view_notifications'),
     path('history/', views.show_history, name='history'),
     path('add_game/', views.add_game_history, name='add_game'),
+    path('user-status/<str:username>/', UserStatusView.as_view(), name='user_status'),
+
 ]
 

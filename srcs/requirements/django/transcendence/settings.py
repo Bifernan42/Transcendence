@@ -60,11 +60,13 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'daphne',
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
     'transcendence.trans',
     'phonenumber_field',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -77,7 +79,19 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+ASGI_APPLICATION = 'transcendence.asgi.application'
+
 ROOT_URLCONF = 'transcendence.urls'
+
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [('0.0.0.0', 6379)],
+        },
+    },
+}
 
 TEMPLATES = [
     {
