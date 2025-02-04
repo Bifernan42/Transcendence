@@ -50,7 +50,8 @@ class CustomUserTrans(AbstractUser):
     email = models.EmailField(unique=True)
     phone_number = PhoneNumberField(blank=False, unique = True)
     photo = models.ImageField(upload_to='users/images/')
-
+    is_online = models.BooleanField(default=False)
+    
     nbrgames = models.IntegerField(default=0, editable=False)
     mmr = models.IntegerField(default=1000, editable=False)
     wins = models.IntegerField(default=0, editable=False)
@@ -114,6 +115,7 @@ class History(models.Model):
     winner = models.IntegerField(default=0)
     duration = models.DurationField()
     date_played = models.DateTimeField()
+    
         
     def clean(self):
         if self.winner < 0 or self.winner > 2:

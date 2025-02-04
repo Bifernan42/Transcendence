@@ -548,3 +548,11 @@ def add_game_history(request):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"detail": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
 
+
+class UserStatusView(APIView):
+    def get(self, request, username):
+        try:
+            user = CustomUserTrans.objects.get(username=username)
+            return Response({"is_online": user.is_online})
+        except CustomUserTrans.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)

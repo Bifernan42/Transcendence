@@ -30,6 +30,15 @@ services:
     networks:
       - transcendence
 
+  # pong:
+  #   container_name: pong
+  #   build: ./requirements/pong
+
+  #   ports:
+  #     - "8081:8081"
+  #   networks:
+  #     - transcendence
+
 volumes:
   postgres_data:
 

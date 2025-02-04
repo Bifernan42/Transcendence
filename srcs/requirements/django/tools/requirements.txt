@@ -10,3 +10,6 @@ psycopg2-binary>=2.9
 PyJWT==2.10.1
 sqlparse==0.5.3
 pillow==11.1.0
+daphne==4.1.2
+channels==4.2.0
+websocket-client==1.8.0
