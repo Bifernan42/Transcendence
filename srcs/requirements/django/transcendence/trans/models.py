@@ -7,6 +7,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.core.files import File
 from django.conf import settings
+from django.utils.crypto import get_random_string
 import os
 
 class CustomUserTransManager(BaseUserManager):
@@ -45,6 +46,9 @@ class CustomUserTransManager(BaseUserManager):
             raise ValueError('Superuser must have is_superuser=True.')
 
         return self._create_user(username, email, password, **extra_fields)
+    
+    def make_random_password(self, length=10, allowed_chars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
+        return get_random_string(length, allowed_chars)
 
 class CustomUserTrans(AbstractUser):
     email = models.EmailField(unique=True)
@@ -58,7 +62,7 @@ class CustomUserTrans(AbstractUser):
     loses = models.IntegerField(default=0, editable=False)
     null = models.IntegerField(default=0, editable=False)
     percent_win = models.IntegerField(default=0, editable=False)
-
+    backend = 'transcendence.trans.backends.Intra42OAuth2'
     objects = CustomUserTransManager()
 
     USERNAME_FIELD = 'username'

@@ -42,6 +42,10 @@ urlpatterns = [
     path('history/', views.show_history, name='history'),
     path('add_game/', views.add_game_history, name='add_game'),
     path('user-status/<str:username>/', UserStatusView.as_view(), name='user_status'),
-
+    path('login/42/', views.Intra42LoginView.as_view(), name='login_42'),
+    path('callback/42/', views.Intra42CallbackView.as_view(), name='callback_42'),
+    ########TEST##########
+    path('profile/', views.profile_view, name='profile'),
+    path('login_page/42/', views.login_42_page, name='login-42-page'),
 ]
 

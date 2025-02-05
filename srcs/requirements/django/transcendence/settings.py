@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'transcendence.trans',
     'phonenumber_field',
     'channels',
+    'social_django',
 ]
 
 MIDDLEWARE = [
@@ -96,7 +97,7 @@ CHANNEL_LAYERS = {
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['/app/transcendence/templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -212,3 +213,18 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'adm.transc25@gmail.com'
 EMAIL_HOST_PASSWORD = 'fxzj ujzk bdgn xcqw'
 DEFAULT_FROM_EMAIL = 'adm.transc25@gmail.com'
+
+
+
+AUTHENTICATION_BACKENDS = (
+    'transcendence.trans.backends.Intra42OAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+#Pour modifer ça, aller dans settings -> API -> create new app sur l'intra
+INTRA_42_ID = 'u-s4t2ud-7d3469743fce1585b0910d91a8413cf0568b22637c674dc881a72d4d1f105c4d'
+INTRA_42_SECRET = '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'
+INTRA_42_REDIRECT_URI = "http://127.0.0.1:8000/api/callback/42/" # a definir sur l'intra aussi
+INTRA_42_AUTH_URL = "https://api.intra.42.fr/oauth/authorize"
+INTRA_42_TOKEN_URL = "https://api.intra.42.fr/oauth/token"
+INTRA_42_USER_URL = "https://api.intra.42.fr/v2/me"
