@@ -13,3 +13,5 @@ pillow==11.1.0
 daphne==4.1.2
 channels==4.2.0
 websocket-client==1.8.0
+social-auth-app-django==5.4.2
+requests==2.32.3

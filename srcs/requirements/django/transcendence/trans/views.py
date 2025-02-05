@@ -32,7 +32,9 @@ from django.core.files.base import ContentFile
 from PIL import Image
 import re
 import os
-
+import requests
+from urllib.parse import urlencode
+from django.conf import settings
 
 
 class LoginSerializer(serializers.Serializer):
@@ -556,3 +558,155 @@ class UserStatusView(APIView):
             return Response({"is_online": user.is_online})
         except CustomUserTrans.DoesNotExist:
             return Response({"error": "User not found"}, status=404)
+
+
+class Intra42LoginView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request):
+        params = {
+            "client_id": settings.INTRA_42_ID,
+            "redirect_uri": settings.INTRA_42_REDIRECT_URI,
+            "response_type": "code",
+            "scope": "public",
+        }
+        return redirect(f"{settings.INTRA_42_AUTH_URL}?{urlencode(params)}")
+
+"""
+Version sans sucre
+
+class Intra42CallbackView(APIView):
+    def get(self, request):
+        code = request.GET.get("code")
+        if not code:
+            return Response({"error": "No authorization code provided"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        token_data = {
+            "grant_type": "authorization_code",
+            "client_id": settings.INTRA_42_ID,
+            "client_secret": settings.INTRA_42_SECRET,
+            "code": code,
+            "redirect_uri": settings.INTRA_42_REDIRECT_URI,
+        }
+        token_response = requests.post(settings.INTRA_42_TOKEN_URL, data=token_data)
+        token_json = token_response.json()
+        if "access_token" not in token_json:
+            return Response({"error": "Failed to retrieve access token"}, status=status.HTTP_400_BAD_REQUEST)
+        access_token = token_json["access_token"]
+
+        headers = {"Authorization": f"Bearer {access_token}"}
+        user_response = requests.get(settings.INTRA_42_USER_URL, headers=headers)
+        user_data = user_response.json()
+        if "id" not in user_data:
+            return Response({"error": "Failed to fetch user data"}, status=status.HTTP_400_BAD_REQUEST)
+        intra_id = user_data["id"]
+        username = user_data["login"]
+        email = user_data.get("email", f"{username}@student.42.fr")
+        try:
+            user = CustomUserTrans.objects.get(username=username)
+        except CustomUserTrans.DoesNotExist:
+     
+            intra_str = str(intra_id)
+            if len(intra_str) >= 9:
+                phone_digits = intra_str[-9:]
+            else:
+                phone_digits = intra_str.zfill(9)
+            dummy_phone_number = f"+33{phone_digits}"
+            
+            random_password = CustomUserTrans.objects.make_random_password()
+            
+            user = CustomUserTrans.objects.create_user(
+                backend='transcendence.trans.backends.Intra42OAuth2',
+                username=username,
+                email=email,
+                password=random_password,
+                phone_number=dummy_phone_number
+            )
+        refresh = RefreshToken.for_user(user)
+        login(request, user)
+        return Response({
+            "detail": "Successfully logged in.",
+            "refresh": str(refresh),
+            "access": str(refresh.access_token)
+        }, status=status.HTTP_200_OK)
+
+"""
+
+#version cookie :
+class Intra42CallbackView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request):
+        code = request.GET.get("code")
+        if not code:
+            return Response({"error": "No authorization code provided"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        token_data = {
+            "grant_type": "authorization_code",
+            "client_id": settings.INTRA_42_ID,          
+            "client_secret": settings.INTRA_42_SECRET, 
+            "code": code,
+            "redirect_uri": settings.INTRA_42_REDIRECT_URI,
+        }
+        token_response = requests.post(settings.INTRA_42_TOKEN_URL, data=token_data)
+        token_json = token_response.json()
+        if "access_token" not in token_json:
+            return Response({"error": "Failed to retrieve access token"}, status=status.HTTP_400_BAD_REQUEST)
+        access_token = token_json["access_token"]
+
+        headers = {"Authorization": f"Bearer {access_token}"}
+        user_response = requests.get(settings.INTRA_42_USER_URL, headers=headers)
+        user_data = user_response.json()
+        if "id" not in user_data:
+            return Response({"error": "Failed to fetch user data"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        intra_id = user_data["id"]
+        username = user_data["login"]
+        email = user_data.get("email", f"{username}@student.42.fr")
+        
+        try:
+            user = CustomUserTrans.objects.get(username=username)
+        except CustomUserTrans.DoesNotExist:
+            intra_str = str(intra_id)
+            phone_digits = intra_str[-9:].zfill(9)
+            dummy_phone_number = f"+33{phone_digits}"
+            
+            random_password = CustomUserTrans.objects.make_random_password()
+            
+            user = CustomUserTrans.objects.create_user(
+                username=username,
+                email=email,
+                password=random_password,
+                phone_number=dummy_phone_number
+            )
+     
+        login(request, user)
+     
+        refresh = RefreshToken.for_user(user)
+     
+        response = redirect('profile')  
+    
+        response.set_cookie(
+            key='access_token',
+            value=str(refresh.access_token),
+            httponly=True,
+            secure=False,
+            samesite='Lax',
+            max_age=60*60 
+        )
+        response.set_cookie(
+            key='refresh_token',
+            value=str(refresh),
+            httponly=True,
+            secure=False,
+            samesite='Lax',
+            max_age=24*60*60
+        )
+        
+        return response
+    
+
+def login_42_page(request):
+        return render(request, 'login_42.html')
+    
+@login_required
+def profile_view(request):
+        return render(request, 'profile.html')
