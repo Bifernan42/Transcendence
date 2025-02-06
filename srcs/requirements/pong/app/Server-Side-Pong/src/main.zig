@@ -20,6 +20,10 @@ const Client = @import("Client.zig");
 const Runtime = @import("Runtime.zig");
 const GamePool = @import("GamePool.zig");
 
+pub const std_options: std.Options = .{
+    .log_level = .debug,
+};
+
 const SUCCESS: u8 = 0;
 const FAILURE: u8 = 1;
 
@@ -35,7 +39,6 @@ pub fn main() !u8 {
     var gpa: heap.GeneralPurposeAllocator(gpa_options) = .init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    log.info("[{d}] initializing memory allocator", .{std.time.timestamp()});
 
     var envp = process.getEnvMap(allocator) catch |err| {
         log.err("fatal error {!}. shutting down.", .{err});
@@ -52,6 +55,7 @@ pub fn main() !u8 {
     };
 
     const db_pool = pg.Pool.initUri(allocator, uri, 2, 10_000) catch |err| {
+        pg.printSSLError();
         log.err("fatal error {!}. shutting down.", .{err});
         return FAILURE;
     };
@@ -70,6 +74,9 @@ pub fn main() !u8 {
     const server_options: httpz.Config = .{
         .port = 8081,
         .address = "0.0.0.0",
+        .thread_pool = .{
+            .count = 8,
+        },
     };
 
     log.info("[{d}] initializing http server on : 0.0.0.0:8081", .{std.time.timestamp()});
@@ -82,38 +89,48 @@ pub fn main() !u8 {
         server.deinit();
     }
 
-    log.info("[{d}] listening on : 0.0.0.0:8081", .{std.time.timestamp()});
-    std.debug.print("listening", .{});
+    var router = server.router(.{});
+    router.tryGet("/", index, .{ .handler = &runtime }) catch |err| {
+        log.err("fatal error {!}. shutting down.", .{err});
+        return FAILURE;
+    };
+
+    router.tryGet("/play/nodb/:game_id", Runtime.handleWebSocketUpgrade, .{ .handler = &runtime }) catch |err| {
+        log.err("fatal error {!}. shutting down.", .{err});
+        return FAILURE;
+    };
+
+    router.tryGet("/play/db/:game_id", Runtime.handleWebSocketUpgradeFetchGame, .{ .handler = &runtime }) catch |err| {
+        log.err("fatal error {!}. shutting down.", .{err});
+        return FAILURE;
+    };
+
+    log.info("[{d}] listening : 0.0.0.0:8081", .{std.time.timestamp()});
     server.listen() catch |err| {
         log.err("fatal error {!}. shutting down.", .{err});
         return FAILURE;
     };
 
-    var router = server.router(.{});
-    router.get("/", index, .{ .handler = &runtime });
-    router.get("/play/:game_id", Runtime.handleWebSocketUpgrade, .{ .handler = &runtime });
-
     log.info("[{d}] exiting server", .{std.time.timestamp()});
     return SUCCESS;
 }
 
-pub fn index(rt: *Runtime, req: *httpz.Request, res: *httpz.Response) !void {
-    _ = rt;
-    _ = req;
+pub fn index(_: *Runtime, req: *httpz.Request, res: *httpz.Response) !void {
+    log.info("[{d}] redirected to {any}", .{ std.time.timestamp(), req.url });
     res.body =
-        \\     <!DOCTYPE html>
-        \\ <html lang="en">
-        \\ <head>
-        \\   <meta charset="UTF-8">
-        \\   <title>Pong</title>
-        \\ </head>
-        \\ <body>
-        \\   <h1>Pong</h1>
-        \\   <a href="/play/1">Play Pong</a>
-        \\ </body>
-        \\ </html>
+        \\<!DOCTYPE html>
+        \\<html lang="en">
+        \\<head>
+        \\<meta charset="UTF-8">
+        \\<title>Pong</title>
+        \\</head>
+        \\<body>
+        \\<h1>Pong</h1>
+        \\<a href="/play/nodb/1">Pong websocket endpoint</a>
+        \\<a href="/play/db/1">Pong websocket db check endpoint</a>
+        \\</body>
+        \\</html>
     ;
-    res.status = 200;
 }
 
 test "request" {
