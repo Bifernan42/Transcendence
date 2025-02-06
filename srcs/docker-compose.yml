@@ -30,14 +30,21 @@ services:
     networks:
       - transcendence
 
-  # pong:
-  #   container_name: pong
-  #   build: ./requirements/pong
-
-  #   ports:
-  #     - "8081:8081"
-  #   networks:
-  #     - transcendence
+  pong:
+    container_name: pong
+    build: ./requirements/pong
+    ports:
+      - "8081:8081"
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin_password
+      - POSTGRES_DB=transcendencedb
+      - DB_HOST=postgres
+      - DB_PORT=5432
+    depends_on:
+      - postgres
+    networks:
+      - transcendence
 
 volumes:
   postgres_data:
