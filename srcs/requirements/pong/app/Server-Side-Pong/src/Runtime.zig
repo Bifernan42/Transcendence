@@ -29,114 +29,19 @@ allocator: mem.Allocator,
 db_pool: *pg.Pool,
 gm_pool: *GamePool,
 
-pub fn handleWebSocketUpgradeFetchGame(rt: *Runtime, req: *httpz.Request, res: *httpz.Response) !void {
-    // Extract game_id from URL parameters
-    const game_id = req.param("game_id") orelse {
-        log.err("Missing game_id parameter in request", .{});
-        res.status = 400;
-        res.body = "WebSocket handshake failed: missing game_id parameter.";
-        return;
+// Initializes the runtime (handler for httpz.Server)
+pub fn init(allocator: mem.Allocator, db_pool: ?*pg.Pool, gm_pool: *GamePool) !Runtime {
+    log.info("Initializing runtime", .{});
+    return .{
+        .allocator = allocator,
+        .db_pool = db_pool orelse undefined,
+        .gm_pool = gm_pool,
     };
+}
 
-    log.debug("Received WebSocket upgrade request for game_id: {s}", .{game_id});
-
-    // Prepare the query to fetch game configuration from DB
-    const QUERY =
-        \\ SELECT game_kind, max_score, board_width, board_height,
-        \\ paddle_width, paddle_height, paddle_speed,
-        \\ ball_radius, ball_speed
-        \\ FROM game_object
-        \\ WHERE game_id = $1
-    ;
-
-    // Query the database for the game configuration
-    var result = rt.db_pool.query(QUERY, .{game_id}) catch |err| {
-        log.err("Database query failed for game_id '{s}': {s} | error: {any}", .{ game_id, QUERY, err });
-        res.status = 500;
-        res.body = "Internal Server Error: failed to fetch game configuration.";
-        return;
-    };
-    defer result.deinit();
-
-    var maybe_game_options: ?GamePool.Game.Options = null;
-    if (try result.next()) |row| {
-        // Construct game options from DB row
-        maybe_game_options = .{
-            .vt_game_kind = switch (row.get(i32, 0)) {
-                0 => .local_ai,
-                1 => .local_mp,
-                2 => .remote_mp,
-                else => {
-                    log.err("Invalid game kind '{d}' for game_id '{s}'", .{ row.get(i32, 0), game_id });
-                    res.status = 400;
-                    res.body = "WebSocket handshake failed: invalid game kind.";
-                    return;
-                },
-            },
-            .vt_game_max_score = row.get(u8, 1),
-            .vt_game_board_width = row.get(u16, 2),
-            .vt_game_board_height = row.get(u16, 3),
-            .vt_game_paddle_width = row.get(u16, 4),
-            .vt_game_paddle_height = row.get(u16, 5),
-            .vt_game_paddle_speed = row.get(u16, 6),
-            .vt_game_ball_radius = row.get(u16, 7),
-            .vt_game_ball_speed = row.get(u16, 8),
-        };
-        log.info("Game configuration fetched successfully for game_id '{s}'", .{game_id});
-    } else {
-        log.err("No game configuration found in DB for game_id '{s}'", .{game_id});
-        res.status = 404;
-        res.body = "Game not found.";
-        return;
-    }
-
-    const game_options = maybe_game_options orelse {
-        log.err("Failed to obtain game options for game_id '{s}'", .{game_id});
-        res.status = 500;
-        res.body = "Internal Server Error: game configuration missing.";
-        return;
-    };
-
-    // Retrieve or create the game from the GamePool
-    var game = rt.gm_pool.getGame(game_id) orelse blk: {
-        log.info("Creating new game for game_id '{s}'", .{game_id});
-        break :blk rt.gm_pool.createGame(game_id, game_options) catch |err| {
-            log.err("Error creating game for game_id '{s}': {any}", .{ game_id, err });
-            res.status = 500;
-            res.body = "Internal Server Error: could not create game.";
-            return;
-        };
-    };
-
-    // Create a new WebSocket client instance
-    const client = Client.init("1", game);
-    log.debug("Client initialized for game_id '{s}'", .{game_id});
-
-    // Attempt to join the game with the new client
-    game.join(client) catch |err| switch (err) {
-        error.GameIsFull, error.GameIsDone, error.InvalidAction => {
-            log.err("Client failed to join game '{s}': {any}", .{ game_id, err });
-            res.status = 400;
-            res.body = "WebSocket handshake failed: game cannot accept new client.";
-            return;
-        },
-    };
-
-    // Set up WebSocket context
-    const ctx: WebsocketContext = .{
-        .player = client,
-        .conn = undefined,
-    };
-
-    // Upgrade HTTP connection to WebSocket
-    const upgrade = httpz.upgradeWebsocket(WebsocketHandler, req, res, ctx) catch |err| {
-        log.err("WebSocket upgrade error for game_id '{s}': {any}", .{ game_id, err });
-        res.status = 400;
-        res.body = "WebSocket handshake failed during upgrade.";
-        return;
-    };
-    log.info("WebSocket upgrade successful for game_id '{s}'", .{game_id});
-    _ = upgrade;
+pub fn deinit(self: *Runtime) void {
+    log.info("Deinitializing runtime", .{});
+    _ = self;
 }
 
 pub fn notFound(_: *Runtime, req: *httpz.Request, res: *httpz.Response) !void {
@@ -183,21 +88,6 @@ pub const WebsocketHandler = struct {
         };
     }
 };
-
-// Initializes the runtime (handler for httpz.Server)
-pub fn init(allocator: mem.Allocator, db_pool: ?*pg.Pool, gm_pool: *GamePool) !Runtime {
-    log.info("Initializing runtime", .{});
-    return .{
-        .allocator = allocator,
-        .db_pool = db_pool orelse undefined,
-        .gm_pool = gm_pool,
-    };
-}
-
-pub fn deinit(self: *Runtime) void {
-    log.info("Deinitializing runtime", .{});
-    _ = self;
-}
 
 // WebSocket upgrade route
 pub fn handleWebSocketUpgrade(rt: *Runtime, req: *httpz.Request, res: *httpz.Response) !void {
@@ -260,5 +150,115 @@ pub fn handleWebSocketUpgrade(rt: *Runtime, req: *httpz.Request, res: *httpz.Res
         return;
     };
     log.info("WebSocket upgrade completed for game_id '{s}'", .{game_id});
+    _ = upgrade;
+}
+
+pub fn handleWebSocketUpgradeFetchGame(rt: *Runtime, req: *httpz.Request, res: *httpz.Response) !void {
+    // Extract game_id from URL parameters
+    const game_id = req.param("game_id") orelse {
+        log.err("Missing game_id parameter in request", .{});
+        res.status = 400;
+        res.body = "WebSocket handshake failed: missing game_id parameter.";
+        return;
+    };
+
+    log.debug("Received WebSocket upgrade request for game_id: {s}", .{game_id});
+
+    // Prepare the query to fetch game configuration from DB
+    const QUERY =
+        \\ SELECT game_kind, max_score, board_width, board_height,
+        \\ paddle_width, paddle_height, paddle_speed,
+        \\ ball_radius, ball_speed
+        \\ FROM game_object
+        \\ WHERE game_id = $1
+    ;
+
+    // Query the database for the game configuration
+    var result = rt.db_pool.query(QUERY, .{game_id}) catch |err| {
+        log.err("Database query failed for game_id '{s}': {s} | error: {any}", .{ game_id, QUERY, err });
+        res.status = 500;
+        res.body = "Internal Server Error: failed to fetch game configuration.";
+        return;
+    };
+    defer result.deinit();
+
+    var maybe_game_options: ?GamePool.Game.Options = null;
+    if (try result.next()) |row| {
+        // Construct game options from DB row
+        maybe_game_options = .{
+            .vt_game_kind = switch (row.get(i32, 0)) {
+                0 => .local_ai,
+                1 => .local_mp,
+                2 => .remote_mp,
+                else => {
+                    log.err("Invalid game kind '{d}' for game_id '{s}'", .{ row.get(i32, 0), game_id });
+                    res.status = 400;
+                    res.body = "WebSocket handshake failed: invalid game kind.";
+                    return;
+                },
+            },
+            .vt_game_max_score = row.get(u8, 1),
+            .vt_game_board_width = @intCast(row.get(i32, 2)),
+            .vt_game_board_height = @intCast(row.get(i32, 3)),
+            .vt_game_paddle_width = @intCast(row.get(i32, 4)),
+            .vt_game_paddle_height = @intCast(row.get(i32, 5)),
+            .vt_game_paddle_speed = @intCast(row.get(i32, 6)),
+            .vt_game_ball_radius = @intCast(row.get(i32, 7)),
+            .vt_game_ball_speed = @intCast(row.get(i32, 8)),
+        };
+        log.info("Game configuration fetched successfully for game_id '{s}'", .{game_id});
+    } else {
+        log.err("No game configuration found in DB for game_id '{s}'", .{game_id});
+        res.status = 404;
+        res.body = "Game not found.";
+        return;
+    }
+
+    const game_options = maybe_game_options orelse {
+        log.err("Failed to obtain game options for game_id '{s}'", .{game_id});
+        res.status = 500;
+        res.body = "Internal Server Error: game configuration missing.";
+        return;
+    };
+
+    // Retrieve or create the game from the GamePool
+    var game = rt.gm_pool.getGame(game_id) orelse blk: {
+        log.info("Creating new game for game_id '{s}'", .{game_id});
+        break :blk rt.gm_pool.createGame(game_id, game_options) catch |err| {
+            log.err("Error creating game for game_id '{s}': {any}", .{ game_id, err });
+            res.status = 500;
+            res.body = "Internal Server Error: could not create game.";
+            return;
+        };
+    };
+
+    // Create a new WebSocket client instance
+    const client = Client.init("1", game);
+    log.debug("Client initialized for game_id '{s}'", .{game_id});
+
+    // Attempt to join the game with the new client
+    game.join(client) catch |err| switch (err) {
+        error.GameIsFull, error.GameIsDone, error.InvalidAction => {
+            log.err("Client failed to join game '{s}': {any}", .{ game_id, err });
+            res.status = 400;
+            res.body = "WebSocket handshake failed: game cannot accept new client.";
+            return;
+        },
+    };
+
+    // Set up WebSocket context
+    const ctx: WebsocketContext = .{
+        .player = client,
+        .conn = undefined,
+    };
+
+    // Upgrade HTTP connection to WebSocket
+    const upgrade = httpz.upgradeWebsocket(WebsocketHandler, req, res, ctx) catch |err| {
+        log.err("WebSocket upgrade error for game_id '{s}': {any}", .{ game_id, err });
+        res.status = 400;
+        res.body = "WebSocket handshake failed during upgrade.";
+        return;
+    };
+    log.info("WebSocket upgrade successful for game_id '{s}'", .{game_id});
     _ = upgrade;
 }
