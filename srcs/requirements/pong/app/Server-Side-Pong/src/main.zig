@@ -24,6 +24,7 @@ const SUCCESS: u8 = 0;
 const FAILURE: u8 = 1;
 
 pub fn main() !u8 {
+    log.info("[{d}] starting pong server process", .{std.time.timestamp()});
     const gpa_options: heap.GeneralPurposeAllocatorConfig = .{
         .safety = true,
         .thread_safe = true,
@@ -34,42 +35,57 @@ pub fn main() !u8 {
     var gpa: heap.GeneralPurposeAllocator(gpa_options) = .init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+    log.info("[{d}] initializing memory allocator", .{std.time.timestamp()});
 
     var envp = process.getEnvMap(allocator) catch |err| {
         log.err("fatal error {!}. shutting down.", .{err});
         return FAILURE;
     };
     defer envp.deinit();
+    log.info("[{d}] initializing envp map", .{std.time.timestamp()});
 
-    const db_username = envp.get("POSTGRES_USER") orelse "admin";
-    const db_password = envp.get("POSTGRES_PASSWORD") orelse "admin_password";
-    const db_name = envp.get("POSTGRES_DB") orelse "transcendencedb";
-    const db_host = envp.get("DB_HOST") orelse "postgres";
-    const db_port = std.fmt.parseInt(u16, envp.get("DB_PORT") orelse "5432", 10) catch 5432;
-
-    const db_pool_options: pg.Pool.Opts = .{
-        .size = 8,
-        .auth = .{
-            .username = db_username,
-            .password = db_password,
-            .database = db_name,
-        },
-        .connect = .{
-            .host = db_host,
-            .port = db_port,
-        },
-    };
-
-    var db_pool = pg.Pool.init(allocator, db_pool_options) catch |err| {
+    const db_url = envp.get("DATABASE_URL") orelse "";
+    log.info("[{d}] trying to open connection from db_url {s}", .{ std.time.timestamp(), db_url });
+    const uri = std.Uri.parse(db_url) catch |err| {
         log.err("fatal error {!}. shutting down.", .{err});
         return FAILURE;
     };
-    defer db_pool.deinit();
+    // const db_username = envp.get("POSTGRES_USER") orelse "admin";
+    // const db_password = envp.get("POSTGRES_PASSWORD") orelse "admin_password";
+    // const db_host = envp.get("DB_HOST") orelse "0.0.0.0";
+    // const db_port = std.fmt.parseInt(u16, envp.get("DB_PORT") orelse "5432", 10) catch 5432;
 
-    var game_pool = GamePool.init(allocator, null);
+    // log.info("[{d}] db_username = {s}, db_password = {s}, db_host = {s}, db_port = {d}", .{ std.time.timestamp(), db_username, db_password, db_host, db_port });
+    // const db_pool_options: pg.Pool.Opts = .{
+    //     .auth = .{
+    //         .database = "postgres",
+    //         .username = "admin",
+    //         .password = "admin_password",
+    //     },
+    //     .connect = .{
+    //         .host = "0.0.0.0",
+    //         .port = 5432,
+    //     },
+    // };
+    // log.info("[{d}] initializing envp map", .{std.time.timestamp()});
+
+    // log.info("[{d}] opening db_pool connections", .{std.time.timestamp()});
+    // var db_pool = pg.Pool.init(allocator, db_pool_options) catch |err| {
+    //     log.err("fatal error {!}. shutting down.", .{err});
+    //     return FAILURE;
+    // };
+    // defer db_pool.deinit();
+
+    const db_pool = pg.Pool.initUri(allocator, uri, 2, 10_000) catch |err| {
+        log.err("fatal error {!}. shutting down.", .{err});
+        return FAILURE;
+    };
+
+    var game_pool = GamePool.init(allocator, db_pool);
     defer game_pool.deinit();
 
-    var runtime = Runtime.init(allocator, null, &game_pool) catch |err| {
+    log.info("[{d}] initializing runtime of pong server", .{std.time.timestamp()});
+    var runtime = Runtime.init(allocator, db_pool, &game_pool) catch |err| {
         log.err("fatal error {!}. shutting down.", .{err});
         return FAILURE;
     };
@@ -77,9 +93,10 @@ pub fn main() !u8 {
 
     const server_options: httpz.Config = .{
         .port = 8081,
-        .address = "127.0.0.1",
+        .address = "0.0.0.0",
     };
 
+    log.info("[{d}] initializing http server on : 0.0.0.0:8081", .{std.time.timestamp()});
     var server = httpz.Server(*Runtime).init(allocator, server_options, &runtime) catch |err| {
         log.err("fatal error {!}. shutting down.", .{err});
         return FAILURE;
@@ -89,6 +106,7 @@ pub fn main() !u8 {
         server.deinit();
     }
 
+    log.info("[{d}] listening on : 0.0.0.0:8081", .{std.time.timestamp()});
     std.debug.print("listening", .{});
     server.listen() catch |err| {
         log.err("fatal error {!}. shutting down.", .{err});
@@ -99,6 +117,7 @@ pub fn main() !u8 {
     router.get("/", index, .{ .handler = &runtime });
     router.get("/play/:game_id", Runtime.handleWebSocketUpgrade, .{ .handler = &runtime });
 
+    log.info("[{d}] exiting server", .{std.time.timestamp()});
     return SUCCESS;
 }
 

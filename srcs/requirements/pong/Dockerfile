@@ -2,7 +2,7 @@
 FROM alpine:latest
 
 # Install bash (if needed for debugging) and any other tools
-RUN apk update && apk add --no-cache bash
+RUN apk update && apk add --no-cache bash openssl
 
 # Set the working directory to /app
 WORKDIR /
