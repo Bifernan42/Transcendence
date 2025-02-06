@@ -96,9 +96,29 @@ pub fn main() !u8 {
     };
 
     var router = server.router(.{});
+    router.get("/", index, .{ .handler = &runtime });
     router.get("/play/:game_id", Runtime.handleWebSocketUpgrade, .{ .handler = &runtime });
 
     return SUCCESS;
+}
+
+pub fn index(rt: *Runtime, req: *httpz.Request, res: *httpz.Response) !void {
+    _ = rt;
+    _ = req;
+    res.body =
+        \\     <!DOCTYPE html>
+        \\ <html lang="en">
+        \\ <head>
+        \\   <meta charset="UTF-8">
+        \\   <title>Pong</title>
+        \\ </head>
+        \\ <body>
+        \\   <h1>Pong</h1>
+        \\   <a href="/play/1">Play Pong</a>
+        \\ </body>
+        \\ </html>
+    ;
+    res.status = 200;
 }
 
 test "request" {
