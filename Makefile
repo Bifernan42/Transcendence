@@ -10,7 +10,7 @@ up: build
 
 # stop the containers
 down:
-	docker-compose -f ./srcs/docker-compose.yml down1w
+	docker-compose -f ./srcs/docker-compose.yml down
 
 # stop the containers
 stop:

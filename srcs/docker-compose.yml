@@ -1,4 +1,4 @@
-version : '3.8'
+version: '3.8'
 services:
   django:
     container_name: django
@@ -6,11 +6,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgres://admin:admin_password@postgres:5432/transcendencedb
+      - DATABASE_URL=postgresql://admin:admin_password@postgres:5432/transcendencedb
       - DB_HOST=postgres
       - DB_PORT=5432
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - ./requirements/django:/app
     networks:
@@ -29,15 +30,24 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - transcendence
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d transcendencedb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # pong:
-  #   container_name: pong
-  #   build: ./requirements/pong
-
-  #   ports:
-  #     - "8081:8081"
-  #   networks:
-  #     - transcendence
+  pong:
+    container_name: pong
+    build: ./requirements/pong
+    ports:
+      - "8081:8081"
+    environment:
+      - DATABASE_URL=postgresql://admin:admin_password@postgres:5432/transcendencedb
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - transcendence
 
 volumes:
   postgres_data:
