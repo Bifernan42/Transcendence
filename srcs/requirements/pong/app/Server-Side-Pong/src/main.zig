@@ -50,36 +50,12 @@ pub fn main() !u8 {
         log.err("fatal error {!}. shutting down.", .{err});
         return FAILURE;
     };
-    // const db_username = envp.get("POSTGRES_USER") orelse "admin";
-    // const db_password = envp.get("POSTGRES_PASSWORD") orelse "admin_password";
-    // const db_host = envp.get("DB_HOST") orelse "0.0.0.0";
-    // const db_port = std.fmt.parseInt(u16, envp.get("DB_PORT") orelse "5432", 10) catch 5432;
-
-    // log.info("[{d}] db_username = {s}, db_password = {s}, db_host = {s}, db_port = {d}", .{ std.time.timestamp(), db_username, db_password, db_host, db_port });
-    // const db_pool_options: pg.Pool.Opts = .{
-    //     .auth = .{
-    //         .database = "postgres",
-    //         .username = "admin",
-    //         .password = "admin_password",
-    //     },
-    //     .connect = .{
-    //         .host = "0.0.0.0",
-    //         .port = 5432,
-    //     },
-    // };
-    // log.info("[{d}] initializing envp map", .{std.time.timestamp()});
-
-    // log.info("[{d}] opening db_pool connections", .{std.time.timestamp()});
-    // var db_pool = pg.Pool.init(allocator, db_pool_options) catch |err| {
-    //     log.err("fatal error {!}. shutting down.", .{err});
-    //     return FAILURE;
-    // };
-    // defer db_pool.deinit();
 
     const db_pool = pg.Pool.initUri(allocator, uri, 2, 10_000) catch |err| {
         log.err("fatal error {!}. shutting down.", .{err});
         return FAILURE;
     };
+    defer db_pool.deinit();
 
     var game_pool = GamePool.init(allocator, db_pool);
     defer game_pool.deinit();
