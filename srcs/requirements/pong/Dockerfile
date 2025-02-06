@@ -5,10 +5,10 @@ FROM alpine:latest
 RUN apk update && apk add --no-cache bash
 
 # Set the working directory to /app
-WORKDIR /app
+WORKDIR /
 
 # Copy the entire app folder (the current directory) into /app inside the container
-COPY . /app
+COPY . /
 
 # Copy the prebuilt server executable to /usr/bin/ and make it executable
 RUN cp /app/Server-Side-Pong/zig-out/bin/server /usr/bin/ && \
