@@ -16,4 +16,4 @@ RUN chmod +x /bin/server
 EXPOSE 8081
 
 # Launch the server executable
-CMD ["/usr/bin/server"]
+CMD ["/bin/server"]
