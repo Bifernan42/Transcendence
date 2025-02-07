@@ -9,6 +9,10 @@ services:
       - DATABASE_URL=postgresql://admin:admin_password@postgres:5432/transcendencedb
       - DB_HOST=postgres
       - DB_PORT=5432
+      - API42_ID='u-s4t2ud-7d3469743fce1585b0910d91a8413cf0568b22637c674dc881a72d4d1f105c4d'
+      - API42_SECRET='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'
+    env_file:
+    	- .env
     depends_on:
       postgres:
         condition: service_healthy
